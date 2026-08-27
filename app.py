@@ -1,5 +1,5 @@
 # ============================================================
-#  APP SSR — v28.5.1 (Início Limpo + Importação de Primers Sob Demanda)
+#  APP SSR — v28.5.2 (Form de Indivíduos Fixo + Altura CSS + Import Seguro)
 #  ✅ LOGIN COM USUÁRIO E SENHA PADRÃO: ifesbiomol / biomol102030
 #  ✅ EXCEL EM BLOCOS MULTIPRIMER: Arial 11, Centralizado, Sem Cores de Fundo
 #  ✅ MODO CRIAÇÃO LIVRE DE COLUNAS (clicar, arrastar, deletar)
@@ -34,13 +34,26 @@ from datetime import datetime
 USUARIO_PADRAO = "ifesbiomol"
 SENHA_PADRAO = "biomol102030"
 
+st.set_page_config(page_title="SSR Pro v28.5.2", page_icon="🧬", layout="wide")
 
-st.set_page_config(page_title="SSR Pro v28.5.1", page_icon="🧬", layout="wide")
+# CSS: Trava de Posição da Altura do Multiselect (máx 110px com rolagem interna)
 st.markdown("""
 <style>
     .block-container { padding-top:1rem; padding-bottom:1rem; max-width:100% !important; }
     iframe { border:none !important; }
     div[data-testid="column"] button { width:100%; margin-bottom:4px; }
+    
+    /* Caixa de IDs selecionados: altura FIXA + scroll interno */
+    div[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
+        max-height: 110px !important;
+        overflow-y: auto !important;
+        flex-wrap: wrap !important;
+        align-content: flex-start !important;
+    }
+    /* Evita o container expandir o layout inteiro */
+    div[data-testid="stMultiSelect"] {
+        min-height: 110px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,7 +69,6 @@ def verificar_autenticacao():
     if st.session_state["autenticado"]:
         return True
 
-    # Tela de Login / Autenticação
     st.markdown("<br><br>", unsafe_allow_html=True)
     c_left, c_center, c_right = st.columns([1, 2, 1])
     with c_center:
@@ -76,7 +88,6 @@ def verificar_autenticacao():
                 
     return False
 
-# Bloqueia a execução caso as credenciais não estejam corretas
 if not verificar_autenticacao():
     st.stop()
 
@@ -89,7 +100,6 @@ BACKUP_FILE = os.path.join(BACKUP_DIR, "backup_session_state.pkl")
 GEIS_DIR = os.path.join(BACKUP_DIR, "geis")
 
 def garantir_pastas():
-    """Garante que as pastas de backup e de géis existam em qualquer computador"""
     os.makedirs(BACKUP_DIR, exist_ok=True)
     os.makedirs(GEIS_DIR, exist_ok=True)
     return os.path.abspath(BACKUP_DIR), os.path.abspath(GEIS_DIR)
@@ -100,9 +110,6 @@ def _nome_arquivo_seguro(texto):
 
 def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=None, lista_f2=None,
                             edges1=None, edges2=None, w1=0, skip1=0, skip2=0, y_guia=0):
-    """
-    Gera e salva no computador a imagem do gel processado com marcações
-    """
     try:
         _, geis_abs = garantir_pastas()
         if img_bgr is None:
@@ -116,11 +123,9 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
         edges1 = edges1 or []
         edges2 = edges2 or []
 
-        # 1. Linha do Laser
         if y_guia and 0 < int(y_guia) < h:
             cv2.line(img, (0, int(y_guia)), (w - 1, int(y_guia)), (0, 255, 120), 2)
 
-        # 2. Desenhar linhas das bandas e letras identificadoras
         for i, b in enumerate(bandas_salvas):
             y = int(round(float(b.get("y", -1))))
             if 0 <= y < h:
@@ -128,7 +133,6 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
                 letra = chr(97 + i) if i < 26 else f"b{i}"
                 cv2.putText(img, letra, (10, max(20, y - 4)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
 
-        # 3. Desenhar retângulos verdes das presenças marcadas
         def _centro_lane(edges, x_off, lane):
             if not edges or lane < 0 or lane >= len(edges) - 1:
                 return None, None
@@ -142,8 +146,7 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
             if y < 0 or y >= h:
                 continue
             for col_idx, m in enumerate(marks):
-                if int(m) != 1:
-                    continue
+                if int(m) != 1: continue
                 cx, tw = None, 20
                 if col_idx < len(lista_f1):
                     lane = col_idx + int(skip1)
@@ -153,8 +156,7 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
                     if 0 <= idx2 < len(lista_f2):
                         lane = idx2 + int(skip2)
                         cx, tw = _centro_lane(edges2, float(w1), lane)
-                if cx is None:
-                    continue
+                if cx is None: continue
                 x1 = int(cx - tw / 2)
                 x2 = int(cx + tw / 2)
                 y1 = max(0, y - 3)
@@ -166,29 +168,21 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         caminho = os.path.join(GEIS_DIR, f"{safe}_{ts}.jpg")
         ok = cv2.imwrite(caminho, img, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
-        if not ok:
-            return False, "Erro ao gravar o arquivo JPG."
+        if not ok: return False, "Erro ao gravar o arquivo JPG."
         return True, os.path.abspath(caminho)
     except Exception as e:
         return False, str(e)
 
 def salvar_backup_local():
-    """Grava as matrizes salvas no computador"""
     try:
         pasta_abs, _ = garantir_pastas()
-        
         with open(BACKUP_FILE, "wb") as f:
             pickle.dump(st.session_state["todas_matrizes"], f)
-        
         if st.session_state["todas_matrizes"]:
-            excel_data = exportar_excel_completo(
-                st.session_state["todas_matrizes"], 
-                nome_export="Backup_Automatico"
-            )
+            excel_data = exportar_excel_completo(st.session_state["todas_matrizes"], nome_export="Backup_Automatico")
             excel_path = os.path.join(BACKUP_DIR, "SSR_Matriz_Backup_Completo.xlsx")
             with open(excel_path, "wb") as f_excel:
                 f_excel.write(excel_data)
-                
         return True, pasta_abs
     except Exception as e:
         return False, str(e)
@@ -198,18 +192,14 @@ def build_df_from_bands(bands, acessos, primer_name):
     data_rows = []
     for b in bands:
         b_label = b["band"]
-        if b_label.startswith(f"{primer_name}_"):
-            idx_name = b_label
-        else:
-            idx_name = f"{primer_name}_{b_label}"
+        if b_label.startswith(f"{primer_name}_"): idx_name = b_label
+        else: idx_name = f"{primer_name}_{b_label}"
         row_names.append(idx_name)
         data_rows.append(b["vals"])
-        
     df = pd.DataFrame(data_rows, index=row_names, columns=acessos)
     return df
 
 def importar_excel_completo(file_bytes):
-    """Lê um arquivo Excel gerado anteriormente e o reconstrói em DataFrames válidos"""
     try:
         wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
         sheet_name = None
@@ -221,14 +211,12 @@ def importar_excel_completo(file_bytes):
             sheet_name = wb.sheetnames[0]
             
         ws = wb[sheet_name]
-        
         first_row = [cell.value for cell in ws[1]]
         if not first_row or len(first_row) < 2:
             return None, "A planilha parece estar vazia ou fora do formato padrão."
             
         first_primer = str(first_row[0]).strip()
         acessos = [str(val).strip() for val in first_row[1:] if val is not None]
-        
         primers_dict = {}
         current_primer = first_primer
         current_bands = []
@@ -238,9 +226,7 @@ def importar_excel_completo(file_bytes):
             col1_val = row_cells[0].value
             vals = [c.value for c in row_cells[1:]]
             
-            if col1_val is None and all(v is None for v in vals):
-                continue
-                
+            if col1_val is None and all(v is None for v in vals): continue
             if col1_val is not None and all(v is None for v in vals):
                 if current_bands:
                     df = build_df_from_bands(current_bands, acessos, current_primer)
@@ -253,19 +239,13 @@ def importar_excel_completo(file_bytes):
                 band_name = str(col1_val).strip()
                 binary_vals = []
                 for v in vals:
-                    if v is None:
-                        binary_vals.append(False)
+                    if v is None: binary_vals.append(False)
                     else:
-                        try:
-                            binary_vals.append(bool(int(float(v))))
-                        except:
-                            binary_vals.append(False)
+                        try: binary_vals.append(bool(int(float(v))))
+                        except: binary_vals.append(False)
                 
-                if len(binary_vals) < len(acessos):
-                    binary_vals += [False] * (len(acessos) - len(binary_vals))
-                else:
-                    binary_vals = binary_vals[:len(acessos)]
-                    
+                if len(binary_vals) < len(acessos): binary_vals += [False] * (len(acessos) - len(binary_vals))
+                else: binary_vals = binary_vals[:len(acessos)]
                 current_bands.append({"band": band_name, "vals": binary_vals})
                 
         if current_bands:
@@ -282,29 +262,13 @@ def importar_excel_completo(file_bytes):
 # ============================================================
 
 def ordenar_ids(lista):
-    if not lista:
-        return []
-    
+    if not lista: return []
     def chave_ordenacao(item):
         val = str(item).strip().upper()
-        if val in ["L", "M", "LADDER", "MARCADOR"]:
-            return (-1, 0, val)
-        try:
-            return (0, int(val), "")
-        except ValueError:
-            return (1, 0, val)
-            
+        if val in ["L", "M", "LADDER", "MARCADOR"]: return (-1, 0, val)
+        try: return (0, int(val), "")
+        except ValueError: return (1, 0, val)
     return sorted(list(dict.fromkeys(lista)), key=chave_ordenacao)
-
-def sync_e_ordenar_f1():
-    if "f1_select" in st.session_state:
-        if st.session_state.get("ordenar_ids_auto", True):
-            st.session_state["f1_select"] = ordenar_ids(st.session_state["f1_select"])
-
-def sync_e_ordenar_f2():
-    if "f2_select" in st.session_state:
-        if st.session_state.get("ordenar_ids_auto", True):
-            st.session_state["f2_select"] = ordenar_ids(st.session_state["f2_select"])
 
 def remover_sujeira(img_bgr, nivel="Desligado"):
     if nivel == "Desligado" or img_bgr is None: return img_bgr
@@ -403,31 +367,24 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
     
     buf = io.BytesIO()
 
-    if isinstance(primers_dict, pd.DataFrame):
-        primers_list = [(nome_export, primers_dict)]
-    elif isinstance(primers_dict, dict):
-        primers_list = [(p_name, df) for p_name, df in primers_dict.items()]
-    elif isinstance(primers_dict, list):
-        primers_list = primers_dict
-    else:
-        primers_list = [(nome_export, primers_dict)]
+    if isinstance(primers_dict, pd.DataFrame): primers_list = [(nome_export, primers_dict)]
+    elif isinstance(primers_dict, dict): primers_list = [(p_name, df) for p_name, df in primers_dict.items()]
+    elif isinstance(primers_dict, list): primers_list = primers_dict
+    else: primers_list = [(nome_export, primers_dict)]
 
     all_acessos = []
     for _, df_p in primers_list:
         for col in df_p.columns:
-            if col not in all_acessos:
-                all_acessos.append(col)
+            if col not in all_acessos: all_acessos.append(col)
 
     if st.session_state.get("ordenar_ids_auto", True):
         all_acessos = ordenar_ids(all_acessos)
 
     with pd.ExcelWriter(buf, engine="openpyxl") as w:
         sheet_matriz = f"Matriz_{nome_export}"[:31]
-        
         df_init = pd.DataFrame(columns=all_acessos)
         df_init.to_excel(w, sheet_name=sheet_matriz, index=False)
         ws1 = w.sheets[sheet_matriz]
-        
         ws1.delete_rows(1, ws1.max_row + 1)
 
         font_arial = Font(name="Arial", size=11, bold=False)
@@ -439,19 +396,14 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
         for idx_primer, (p_name, df_p) in enumerate(primers_list):
             if idx_primer == 0:
                 cell_a1 = ws1.cell(row=current_row, column=1, value=p_name)
-                cell_a1.font = font_arial_bold
-                cell_a1.alignment = alinhamento_centro
-
+                cell_a1.font = font_arial_bold; cell_a1.alignment = alinhamento_centro
                 for c_idx, acc in enumerate(all_acessos, start=2):
                     cell = ws1.cell(row=current_row, column=c_idx, value=acc)
-                    cell.font = font_arial_bold
-                    cell.alignment = alinhamento_centro
-                
+                    cell.font = font_arial_bold; cell.alignment = alinhamento_centro
                 current_row += 1
             else:
                 cell_p = ws1.cell(row=current_row, column=1, value=p_name)
-                cell_p.font = font_arial_bold
-                cell_p.alignment = alinhamento_centro
+                cell_p.font = font_arial_bold; cell_p.alignment = alinhamento_centro
                 current_row += 1
 
             for band_name in df_p.index:
@@ -459,21 +411,16 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
                 band_label = s_band.split("_")[-1] if "_" in s_band else s_band
                 
                 cell_b = ws1.cell(row=current_row, column=1, value=band_label)
-                cell_b.font = font_arial_bold
-                cell_b.alignment = alinhamento_centro
+                cell_b.font = font_arial_bold; cell_b.alignment = alinhamento_centro
 
                 for c_idx, acc in enumerate(all_acessos, start=2):
                     val = 0
                     if acc in df_p.columns:
                         v = df_p.loc[band_name, acc]
                         val = 1 if bool(v) else 0
-                    
                     cell_v = ws1.cell(row=current_row, column=c_idx, value=val)
-                    cell_v.font = font_arial
-                    cell_v.alignment = alinhamento_centro
-                
+                    cell_v.font = font_arial; cell_v.alignment = alinhamento_centro
                 current_row += 1
-
             current_row += 1
 
         for col in ws1.columns:
@@ -489,16 +436,11 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
 
             for row in ws2.iter_rows():
                 for cell in row:
-                    cell.font = font_arial
-                    cell.alignment = alinhamento_centro
-                    cell.fill = PatternFill(fill_type=None)
-                    if isinstance(cell.value, (int, float)):
-                        cell.number_format = '0.000'
+                    cell.font = font_arial; cell.alignment = alinhamento_centro; cell.fill = PatternFill(fill_type=None)
+                    if isinstance(cell.value, (int, float)): cell.number_format = '0.000'
 
-            for cell in ws2[1]:
-                cell.font = font_arial_bold
-            for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, min_col=1, max_col=1):
-                row[0].font = font_arial_bold
+            for cell in ws2[1]: cell.font = font_arial_bold
+            for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, min_col=1, max_col=1): row[0].font = font_arial_bold
 
             for col in ws2.columns:
                 ml = max(len(str(cell.value or "")) for cell in col)
@@ -1009,23 +951,18 @@ defaults = {
     "last_upload_id":None, "limpeza_nivel":"Desligado",
     "skip1":1, "skip2":0, "auto_update":True,
     "ordenar_ids_auto": True,
-    "todas_matrizes": {}, # Sempre inicia VAZIO (sem recuperar backups velhos)
+    "todas_matrizes": {}, 
     "f1_select": [],
     "f2_select": []
 }
 for k,v in defaults.items():
     if k not in st.session_state: st.session_state[k]=v
 
-# Exibição da mensagem pendente de importação (sem congelar a execução)
-if "msg_import_pendente" in st.session_state:
-    st.success(st.session_state["msg_import_pendente"])
-    del st.session_state["msg_import_pendente"]
-
 # ============================================================
 #  INTERFACE DO APLICATIVO
 # ============================================================
-st.title("🧬 Sistema SSR — Leitor de Gel Duplo v28.5.1")
-st.caption("🚀 v28.5.1: Início Limpo · Importação Sob Demanda · Salvamento de Géis de Conferência (JPG)")
+st.title("🧬 Sistema SSR — Leitor de Gel Duplo v28.5.2")
+st.caption("🚀 v28.5.2: UI Fixada (Formulário + Altura Fixa de IDs) · Início Limpo")
 
 pasta_bkp_abs, pasta_geis_abs = garantir_pastas()
 with st.expander("📁 Exibir caminhos de salvamento neste computador"):
@@ -1039,65 +976,60 @@ with aba1:
     
     opcoes_ids = [str(i) for i in range(1, 301)] + ["L", "C", "C1", "C2", "M"]
 
-    c1, c2, c3 = st.columns([2,4,4])
+    c1, c2 = st.columns([2, 5])
     with c1:
         nome_primer = st.text_input("Nome do Primer:", value="ISSR 19")
         st.session_state["auto_update"] = st.checkbox(
             "⚡ Atualização automática",
             value=bool(st.session_state.get("auto_update",True)),
-            help="Quando ligado, mudanças no canvas (bandas/colunas) atualizam a matriz na hora."
+            help="Quando ligado, mudanças no canvas atualizam a matriz na hora."
         )
         st.session_state["ordenar_ids_auto"] = st.checkbox(
-            "🔢 Ordenar IDs (crescente)",
+            "🔢 Ordenar IDs no gel",
             value=bool(st.session_state.get("ordenar_ids_auto", True)),
-            help="Organiza os números em ordem crescente."
+            help="Ordena apenas as colunas montadas no gel. A ordem da caixa de seleção nunca muda."
         )
 
     with c2:
-        lista_f1_raw = st.multiselect(
-            "Indivíduos Foto 1 (Esquerda):",
-            options=opcoes_ids,
-            key="f1_select",
-            on_change=sync_e_ordenar_f1,
-            help="Selecione os números."
-        )
-        
-        if st.session_state["ordenar_ids_auto"]:
-            lista_f1 = ordenar_ids(st.session_state["f1_select"])
-        else:
-            lista_f1 = list(dict.fromkeys(st.session_state["f1_select"]))
+        with st.form("form_selecao_individuos", clear_on_submit=False):
+            fc1, fc2 = st.columns(2)
+            with fc1:
+                f1_temp = st.multiselect(
+                    "Indivíduos Foto 1 (Esquerda):",
+                    options=opcoes_ids,
+                    default=list(st.session_state.get("f1_select", []))
+                )
+            with fc2:
+                f2_temp = st.multiselect(
+                    "Indivíduos Foto 2 (Direita):",
+                    options=opcoes_ids,
+                    default=list(st.session_state.get("f2_select", []))
+                )
             
-        if not lista_f1:
-            st.error("❌ Lista vazia")
-        else:
-            status_txt = "ordenados" if st.session_state["ordenar_ids_auto"] else "ordem da escolha"
-            st.success(f"✅ {len(lista_f1)} indivíduos selecionados ({status_txt})")
-            
-    with c3:
-        lista_f2_raw = st.multiselect(
-            "Indivíduos Foto 2 (Direita):",
-            options=opcoes_ids,
-            key="f2_select",
-            on_change=sync_e_ordenar_f2,
-            help="Selecione os números."
-        )
-        
-        if st.session_state["ordenar_ids_auto"]:
-            lista_f2 = ordenar_ids(st.session_state["f2_select"])
-        else:
-            lista_f2 = list(dict.fromkeys(st.session_state["f2_select"]))
-            
-        if not lista_f2:
-            st.error("❌ Lista vazia")
-        else:
-            status_txt = "ordenados" if st.session_state["ordenar_ids_auto"] else "ordem da escolha"
-            st.success(f"✅ {len(lista_f2)} indivíduos selecionados ({status_txt})")
+            if st.form_submit_button("✅ Confirmar Indivíduos Selecionados", type="primary", use_container_width=True):
+                st.session_state["f1_select"] = list(dict.fromkeys(f1_temp))
+                st.session_state["f2_select"] = list(dict.fromkeys(f2_temp))
+                st.rerun()
 
-    if lista_f1 and lista_f2:
-        lista_uni = list(dict.fromkeys(lista_f1 + lista_f2))
-        st.info(f"📊 **Total: {len(lista_uni)} indivíduos únicos**")
+    # Aplica ordenação apenas na montagem final se marcado (Não mexe na UI do seletor)
+    if st.session_state.get("ordenar_ids_auto", True):
+        lista_f1 = ordenar_ids(st.session_state.get("f1_select", []))
+        lista_f2 = ordenar_ids(st.session_state.get("f2_select", []))
     else:
-        lista_uni = []
+        lista_f1 = list(st.session_state.get("f1_select", []))
+        lista_f2 = list(st.session_state.get("f2_select", []))
+
+    # Exibição do total limpa sem expandir altura
+    s1, s2, s3 = st.columns(3)
+    with s1: 
+        if lista_f1: st.success(f"Foto 1: {len(lista_f1)} selecionados")
+        else: st.warning("Foto 1: nenhum selecionado")
+    with s2: 
+        if lista_f2: st.success(f"Foto 2: {len(lista_f2)} selecionados")
+        else: st.warning("Foto 2: nenhum selecionado")
+    with s3: 
+        lista_uni = list(dict.fromkeys(lista_f1 + lista_f2)) if (lista_f1 or lista_f2) else []
+        st.info(f"Total único de indivíduos: {len(lista_uni)}")
 
     st.divider()
     st.header("📸 Upload das Fotos")
@@ -1286,30 +1218,20 @@ with aba1:
                 df_to_save.index = [f"{nome_primer}_{x}" for x in df_to_save.index]
                 st.session_state["todas_matrizes"][nome_primer] = df_to_save
                 
-                # 1. Salva Backup e Excel
                 sucesso_backup, desc_caminho = salvar_backup_local()
                 
-                # 2. Salva Foto do Gel com as marcações
                 e1_now = st.session_state.get(f"edges1_{canvas_key}", edges1_init)
                 e2_now = st.session_state.get(f"edges2_{canvas_key}", edges2_init)
                 ok_gel, info_gel = salvar_gel_conferencia(
-                    img_bgr=img_unida,
-                    nome_primer=nome_primer,
-                    bandas_salvas=bandas_salvas,
-                    lista_f1=lista_f1,
-                    lista_f2=lista_f2,
-                    edges1=e1_now,
-                    edges2=e2_now,
-                    w1=int(w1),
-                    skip1=int(st.session_state["skip1"]),
-                    skip2=int(st.session_state["skip2"]),
+                    img_bgr=img_unida, nome_primer=nome_primer, bandas_salvas=bandas_salvas,
+                    lista_f1=lista_f1, lista_f2=lista_f2, edges1=e1_now, edges2=e2_now,
+                    w1=int(w1), skip1=int(st.session_state["skip1"]), skip2=int(st.session_state["skip2"]),
                     y_guia=int(st.session_state["pos_laser"])
                 )
                 
                 if sucesso_backup:
                     msg = f"✅ Primer **{nome_primer}** gravado no disco!\n\n📁 **Matriz/Excel:** `{desc_caminho}`"
-                    if ok_gel:
-                        msg += f"\n\n🖼️ **Gel Processado:** `{info_gel}`"
+                    if ok_gel: msg += f"\n\n🖼️ **Gel Processado:** `{info_gel}`"
                     st.success(msg)
                 else:
                     st.error(f"❌ Erro ao gerar backup físico em disco: {desc_caminho}")
@@ -1318,55 +1240,51 @@ with aba1:
                 e1_now = st.session_state.get(f"edges1_{canvas_key}", edges1_init)
                 e2_now = st.session_state.get(f"edges2_{canvas_key}", edges2_init)
                 ok_gel, info_gel = salvar_gel_conferencia(
-                    img_bgr=img_unida,
-                    nome_primer=nome_primer,
-                    bandas_salvas=bandas_salvas,
-                    lista_f1=lista_f1,
-                    lista_f2=lista_f2,
-                    edges1=e1_now,
-                    edges2=e2_now,
-                    w1=int(w1),
-                    skip1=int(st.session_state["skip1"]),
-                    skip2=int(st.session_state["skip2"]),
+                    img_bgr=img_unida, nome_primer=nome_primer, bandas_salvas=bandas_salvas,
+                    lista_f1=lista_f1, lista_f2=lista_f2, edges1=e1_now, edges2=e2_now,
+                    w1=int(w1), skip1=int(st.session_state["skip1"]), skip2=int(st.session_state["skip2"]),
                     y_guia=int(st.session_state["pos_laser"])
                 )
-                if ok_gel:
-                    st.success(f"🖼️ Gel gravado em:\n`{info_gel}`")
-                else:
-                    st.error(f"❌ Não foi possível salvar o gel: {info_gel}")
+                if ok_gel: st.success(f"🖼️ Gel gravado em:\n`{info_gel}`")
+                else: st.error(f"❌ Não foi possível salvar o gel: {info_gel}")
 
         with col_m2:
             st.markdown("**📂 Continuar a partir de Planilha Pronta:**\nImporte um Excel gerado anteriormente pelo App para carregar os primers:")
             arq_excel_a1 = st.file_uploader("Selecionar planilha Excel para carregar dados:", type=["xlsx"], key="importar_excel_a1")
-            if arq_excel_a1:
-                try:
-                    dict_primers, erro = importar_excel_completo(arq_excel_a1.read())
-                    if erro:
-                        st.error(f"❌ Falha ao ler arquivo: {erro}")
-                    else:
-                        st.session_state["todas_matrizes"].update(dict_primers)
-                        salvar_backup_local()
-                        lista_nomes = list(dict_primers.keys())
-                        nomes_lidos = ", ".join(lista_nomes)
-                        st.session_state["msg_import_pendente"] = f"✅ Arquivo lido com sucesso! {len(dict_primers)} primers encontrados e importados:\n\n📌 **{nomes_lidos}**"
-                        st.rerun()
-                except Exception as ex:
-                    st.error(f"❌ Falha crítica ao importar: {str(ex)}")
+            
+            if arq_excel_a1 is not None:
+                file_id = f"{arq_excel_a1.name}_{arq_excel_a1.size}"
+                if st.session_state.get("last_import_a1") != file_id:
+                    try:
+                        dict_primers, erro = importar_excel_completo(arq_excel_a1.read())
+                        if erro:
+                            st.error(f"❌ Falha ao ler arquivo: {erro}")
+                        else:
+                            st.session_state["todas_matrizes"].update(dict_primers)
+                            salvar_backup_local()
+                            st.session_state["last_import_a1"] = file_id
+                            nomes_lidos = ", ".join(list(dict_primers.keys()))
+                            st.session_state["msg_import_local_a1"] = f"✅ {len(dict_primers)} primers importados:\n\n**{nomes_lidos}**"
+                            st.toast(f"{len(dict_primers)} primers carregados!", icon="✅")
+                    except Exception as ex:
+                        st.error(f"❌ Falha crítica ao importar: {str(ex)}")
+                
+                # Exibe a mensagem de sucesso localmente sem forçar rerun global
+                if st.session_state.get("msg_import_local_a1"):
+                    st.success(st.session_state["msg_import_local_a1"])
 
         st.divider()
         salvos = list(st.session_state["todas_matrizes"].keys())
         if salvos:
-            st.info(f"📦 **{len(salvos)} Primers carregados em cache:** {', '.join(salvos)}")
+            st.caption(f"📦 **{len(salvos)} Primers carregados em memória:** {', '.join(salvos)}")
             if st.button("🗑️ Limpar toda a memória de primers"):
                 st.session_state["todas_matrizes"] = {}
                 if os.path.exists(BACKUP_FILE):
-                    try:
-                        os.remove(BACKUP_FILE)
-                    except:
-                        pass
+                    try: os.remove(BACKUP_FILE)
+                    except: pass
                 st.rerun()
         else:
-            st.info("Nenhum primer na memória temporária.")
+            st.caption("Nenhum primer na memória temporária.")
 
     elif not(lista_f1 and lista_f2): 
         st.info("💡 Selecione os indivíduos de cada foto (caixas acima) para poder enviar as imagens.")
@@ -1458,24 +1376,30 @@ with aba2:
 with aba3:
     st.header("📥 Exportar / Importar Matrizes SSR")
     
-    # CONTAINER DE IMPORTAÇÃO DIRETA NA ABA DE EXCEL
     with st.expander("📂 IMPORTAR DE PLANILHA SSR EXISTENTE (RETOMAR TRABALHO)", expanded=True):
         st.markdown("Se você já possui uma planilha gerada por esta ferramenta no seu computador, faça o upload dela abaixo para restaurar e continuar a trabalhar nela:")
         arq_excel_a3 = st.file_uploader("Fazer upload do arquivo SSR_Combinado.xlsx:", type=["xlsx"], key="importar_excel_a3")
-        if arq_excel_a3:
-            try:
-                dict_primers, erro = importar_excel_completo(arq_excel_a3.read())
-                if erro:
-                    st.error(f"❌ Não foi possível carregar a planilha: {erro}")
-                else:
-                    st.session_state["todas_matrizes"].update(dict_primers)
-                    salvar_backup_local()
-                    lista_nomes = list(dict_primers.keys())
-                    nomes_lidos = ", ".join(lista_nomes)
-                    st.session_state["msg_import_pendente"] = f"✅ Planilha restaurada com sucesso! {len(dict_primers)} primers carregados:\n\n📌 **{nomes_lidos}**"
-                    st.rerun()
-            except Exception as ex:
-                st.error(f"❌ Erro inesperado ao converter planilha: {str(ex)}")
+        
+        if arq_excel_a3 is not None:
+            file_id = f"{arq_excel_a3.name}_{arq_excel_a3.size}"
+            if st.session_state.get("last_import_a3") != file_id:
+                try:
+                    dict_primers, erro = importar_excel_completo(arq_excel_a3.read())
+                    if erro:
+                        st.error(f"❌ Não foi possível carregar a planilha: {erro}")
+                    else:
+                        st.session_state["todas_matrizes"].update(dict_primers)
+                        salvar_backup_local()
+                        st.session_state["last_import_a3"] = file_id
+                        nomes_lidos = ", ".join(list(dict_primers.keys()))
+                        st.session_state["msg_import_local_a3"] = f"✅ Planilha restaurada com sucesso! {len(dict_primers)} primers carregados:\n\n📌 **{nomes_lidos}**"
+                        st.toast(f"{len(dict_primers)} primers carregados!", icon="✅")
+                except Exception as ex:
+                    st.error(f"❌ Erro inesperado ao converter planilha: {str(ex)}")
+            
+            # Exibe a mensagem localmente
+            if st.session_state.get("msg_import_local_a3"):
+                st.success(st.session_state["msg_import_local_a3"])
 
     st.divider()
     st.subheader("📤 Exportar Planilha Excel Atual")
@@ -1536,4 +1460,4 @@ Toda vez que você salva a matriz de um primer:
 | **Deletar Banda** | Botão Direito sobre a banda a ser apagada |
     """)
     st.divider()
-    st.success("✅ SSR Pro v28.5.1 — Fotos dos géis com marcações salvas automaticamente no PC para conferências futuras.")
+    st.success("✅ SSR Pro v28.5.2 — Fotos dos géis com marcações salvas automaticamente no PC para conferências futuras.")
