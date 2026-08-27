@@ -1,0 +1,348 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <script src="https://unpkg.com/streamlit-component-lib@1.4.0/dist/streamlit-component-lib.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            margin:0; padding:0; background:#fff; 
+            font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            user-select:none; overflow:hidden;
+        }
+        #toolbar {
+            padding:12px 20px; background:linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color:#ecf0f1; border-bottom:3px solid #1a252f; font-size:13px;
+            display:flex; justify-content:space-between; align-items:center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .toolbar-section { display:flex; align-items:center; gap:15px; }
+        .control-item { 
+            display:flex; align-items:center; gap:6px;
+            padding:6px 12px; background:rgba(255,255,255,0.1);
+            border-radius:6px; transition:all 0.2s;
+        }
+        .control-item:hover { background:rgba(255,255,255,0.15); }
+        .icon { font-size:16px; font-weight:bold; color:#00ff00;}
+        .label { font-weight:600; color:#3498db; }
+        .value { color:#ecf0f1; }
+        #container-wrapper {
+            width:100%; height:600px; overflow:auto; background:#1a1a1a;
+            position:relative; border:3px solid #34495e; border-radius:4px;
+        }
+        #gel-canvas { 
+            transform-origin:0 0; cursor:crosshair; display:block;
+            image-rendering: -webkit-optimize-contrast;
+        }
+        #container-wrapper::-webkit-scrollbar { width:14px; height:14px; }
+        #container-wrapper::-webkit-scrollbar-track { background:#2c3e50; border-radius:7px; }
+        #container-wrapper::-webkit-scrollbar-thumb { 
+            background:linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border-radius:7px; border:3px solid #2c3e50;
+        }
+        #toast {
+            position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+            background:rgba(46, 204, 113, 0.95); color:#fff;
+            padding:12px 24px; border-radius:8px; font-size:13px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:2000;
+            display:none; animation:slideUp 0.3s ease; font-weight:600;
+        }
+        @keyframes slideUp {
+            from { opacity:0; transform:translateX(-50%) translateY(20px); }
+            to { opacity:1; transform:translateX(-50%) translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <div class="toolbar-section">
+            <div class="control-item">
+                <span style="font-size:16px;">🔄</span>
+                <span class="label">Roda:</span>
+                <span class="value">Zoom</span>
+            </div>
+            <div class="control-item">
+                <span style="font-size:16px;">🔵</span>
+                <span class="label">Esq.(Vazio):</span>
+                <span class="value">Criar Linha</span>
+            </div>
+            <div class="control-item">
+                <span class="icon">—</span>
+                <span class="label">Esq.(Na Linha):</span>
+                <span class="value">Marcar Traço (-)</span>
+            </div>
+            <div class="control-item">
+                <span style="font-size:16px;">🔴</span>
+                <span class="label">Direito:</span>
+                <span class="value">Excluir Linha</span>
+            </div>
+        </div>
+        <div class="toolbar-section">
+            <div style="color:#2ecc71; font-weight:bold; display:flex; align-items:center; gap:8px;">
+                <span style="font-size:18px;">🟩</span>
+                <span>Laser Ativo - Fundo dos Poços</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+    <div id="container-wrapper">
+        <canvas id="gel-canvas"></canvas>
+    </div>
+
+    <script>
+        const Streamlit = window.Streamlit;
+        const container = document.getElementById('container-wrapper');
+        const canvas = document.getElementById('gel-canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+
+        let originalW = 0;
+        let originalH = 0;
+        let scale = 1;
+        let yGuia = 0;
+        let bandas = [];
+        let list1 = [];
+        let list2 = [];
+        let w1 = 0;
+        let w2 = 0;
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const colors = {
+                success: 'rgba(46, 204, 113, 0.95)',
+                info: 'rgba(52, 152, 219, 0.95)',
+                warning: 'rgba(241, 196, 15, 0.95)',
+                error: 'rgba(231, 76, 60, 0.95)'
+            };
+            toast.style.background = colors[type] || colors.success;
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 1500);
+        }
+        
+        function sendDataToStreamlit() {
+            if(Streamlit) {
+                Streamlit.setComponentValue({ bandas: bandas });
+            }
+        }
+
+        function draw() {
+            if(!img.complete || originalW === 0) return;
+            
+            canvas.width = originalW * scale;
+            canvas.height = originalH * scale;
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            let cw1 = (w1 * scale) / Math.max(1, list1.length);
+            let cw2 = (w2 * scale) / Math.max(1, list2.length);
+            let offsetW1 = w1 * scale;
+
+            // Linhas Guia dos Indivíduos no topo
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            
+            for(let i=0; i<list1.length; i++) {
+                let x = i * cw1 + cw1/2;
+                ctx.beginPath(); ctx.moveTo(i*cw1, 0); ctx.lineTo(i*cw1, canvas.height); ctx.stroke();
+                ctx.fillText(list1[i], x, 15);
+            }
+            for(let i=0; i<list2.length; i++) {
+                let x = offsetW1 + (i * cw2) + cw2/2;
+                ctx.beginPath(); ctx.moveTo(offsetW1 + i*cw2, 0); ctx.lineTo(offsetW1 + i*cw2, canvas.height); ctx.stroke();
+                ctx.fillText(list2[i], x, 15);
+            }
+
+            // Laser do Fundo dos Poços
+            if (yGuia > 0) {
+                const yLaser = yGuia * scale;
+                ctx.beginPath();
+                ctx.moveTo(0, yLaser); 
+                ctx.lineTo(canvas.width, yLaser);
+                ctx.strokeStyle = '#2ecc71';
+                ctx.lineWidth = Math.max(2, 3 * scale);
+                ctx.setLineDash([10, 5]); 
+                ctx.stroke(); 
+                ctx.setLineDash([]);
+                
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(10, yLaser - 22, 210, 20);
+                ctx.fillStyle = '#111';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('FUNDO DOS POÇOS (CALIBRAÇÃO)', 15, yLaser - 7);
+            }
+
+            // Desenhar Linhas de Bandas + Traços Horizontais Finos
+            bandas.forEach((b, index) => {
+                const yDraw = b.y * scale;
+                let letra = index < 26 ? String.fromCharCode(97 + index) : ('b' + index);
+                
+                ctx.beginPath();
+                ctx.moveTo(0, yDraw); 
+                ctx.lineTo(canvas.width, yDraw);
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'; 
+                ctx.lineWidth = Math.max(1, 1.2 * scale);
+                ctx.setLineDash([4, 4]); 
+                ctx.stroke(); 
+                ctx.setLineDash([]);
+
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText(letra, 10, yDraw - 4);
+                ctx.textAlign = 'right';
+                ctx.fillText(letra, canvas.width - 18, yDraw - 4);
+
+                // TRAÇO HORIZONTAL FINO VERDE (-)
+                if(b.marks) {
+                    b.marks.forEach((mark, i) => {
+                        if (mark === 1) {
+                            let cx;
+                            if (i < list1.length) {
+                                cx = i * cw1 + cw1/2;
+                            } else {
+                                let idx2 = i - list1.length;
+                                cx = offsetW1 + (idx2 * cw2) + cw2/2;
+                            }
+                            
+                            let traco_w = Math.max(14, 22 * scale);  // Largura horizontal
+                            let traco_h = Math.max(2, 3.5 * scale);   // Espessura fina
+                            
+                            ctx.fillStyle = '#00ff00';
+                            ctx.fillRect(cx - traco_w/2, yDraw - traco_h/2, traco_w, traco_h);
+                            ctx.strokeStyle = '#000000'; 
+                            ctx.lineWidth = Math.max(0.5, 0.8 * scale);
+                            ctx.strokeRect(cx - traco_w/2, yDraw - traco_h/2, traco_w, traco_h);
+                        }
+                    });
+                }
+            });
+        }
+        
+        function onRender(event) {
+            const args = event.detail.args;
+            w1 = args.w1; 
+            w2 = args.w2; 
+            yGuia = args.y_guia;
+            list1 = args.list1 || []; 
+            list2 = args.list2 || [];
+            
+            const novaImgSrc = "data:image/jpeg;base64," + args.img_b64;
+            if (img.src !== novaImgSrc) {
+                img.src = novaImgSrc;
+                img.onload = () => {
+                    originalW = img.width;
+                    originalH = img.height;
+                    scale = args.largura_inicial / originalW;
+                    draw(); 
+                    if(Streamlit) Streamlit.setFrameHeight(680); 
+                };
+            } else {
+                draw();
+            }
+        }
+        
+        if(Streamlit) {
+            Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
+            Streamlit.setComponentReady();
+        }
+
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            const newScale = scale * zoomFactor;
+            
+            if (newScale * originalW < 500 || newScale * originalW > 12000) return;
+            
+            scale = newScale;
+            draw();
+            
+            container.scrollLeft = (mouseX * zoomFactor) - (e.clientX - container.getBoundingClientRect().left);
+            container.scrollTop  = (mouseY * zoomFactor) - (e.clientY - container.getBoundingClientRect().top);
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mX = (e.clientX - rect.left) / scale;
+            const mY = (e.clientY - rect.top) / scale;
+            const totalInd = list1.length + list2.length;
+            
+            if (e.button === 0) {
+                let clickedB = null;
+                for (let b of bandas) {
+                    if (Math.abs(b.y - mY) < 18 / scale) { clickedB = b; break; }
+                }
+
+                if (clickedB) {
+                    let col = -1;
+                    if (mX < w1) {
+                        col = Math.floor(mX / (w1 / Math.max(1, list1.length)));
+                        if(col >= list1.length) col = list1.length - 1;
+                    } else {
+                        col = list1.length + Math.floor((mX - w1) / (w2 / Math.max(1, list2.length)));
+                        if(col >= totalInd) col = totalInd - 1;
+                    }
+                    
+                    if (col >= 0 && col < totalInd) {
+                        if(!clickedB.marks) clickedB.marks = new Array(totalInd).fill(0);
+                        clickedB.marks[col] = clickedB.marks[col] === 1 ? 0 : 1;
+                        let indNome = col < list1.length ? list1[col] : list2[col - list1.length];
+                        showToast((clickedB.marks[col] ? '✓ Marcado: ' : '✗ Desmarcado: ') + indNome, clickedB.marks[col] ? 'success' : 'warning');
+                        draw(); 
+                        sendDataToStreamlit(); 
+                    }
+                } else {
+                    bandas.push({ y: mY, marks: new Array(totalInd).fill(0) });
+                    bandas.sort((a, b) => a.y - b.y);
+                    const letraIndex = bandas.findIndex(b => b.y === mY);
+                    const letra = letraIndex < 26 ? String.fromCharCode(97 + letraIndex) : `b${letraIndex}`;
+                    showToast(`✓ Linha "${letra}" criada!`, 'info');
+                    draw();
+                    sendDataToStreamlit(); 
+                }
+            } else if (e.button === 2) {
+                if (bandas.length === 0) return;
+                let closestIdx = 0;
+                let minDist = Math.abs(bandas[0].y - mY);
+                
+                for (let i = 1; i < bandas.length; i++) {
+                    const dist = Math.abs(bandas[i].y - mY);
+                    if (dist < minDist) { minDist = dist; closestIdx = i; }
+                }
+                
+                if (minDist < 25 / scale) {
+                    const letraExcluida = closestIdx < 26 ? 
+                        String.fromCharCode(97 + closestIdx) : `b${closestIdx}`;
+                    bandas.splice(closestIdx, 1);
+                    showToast(`✗ Linha "${letraExcluida}" excluída!`, 'warning');
+                    draw();
+                    sendDataToStreamlit(); 
+                }
+            }
+        });
+        
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (bandas.length > 0 && confirm('🗑️ Limpar todas as bandas?')) {
+                    bandas = [];
+                    draw();
+                    sendDataToStreamlit();
+                    showToast('✓ Todas as bandas foram removidas', 'info');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
