@@ -1,10 +1,11 @@
 # ============================================================
-#  APP SSR — v28.5.0 (Géis com Marcações + Auto-Pastas + Importação com Nomes)
+#  APP SSR — v28.5.1 (Início Limpo + Importação de Primers Sob Demanda)
 #  ✅ LOGIN COM USUÁRIO E SENHA PADRÃO: ifesbiomol / biomol102030
 #  ✅ EXCEL EM BLOCOS MULTIPRIMER: Arial 11, Centralizado, Sem Cores de Fundo
 #  ✅ MODO CRIAÇÃO LIVRE DE COLUNAS (clicar, arrastar, deletar)
 #  ✅ Zoom com roda, Pan com meio/Espaço, UPGMA Multilocus e Excel
 #  ✅ Salva Géis de Conferência em JPG + Backup Físico em Qualquer PC
+#  ✅ Início 100% Limpo: Primers só aparecem ao importar arquivo Excel
 # ============================================================
 
 import streamlit as st
@@ -34,7 +35,7 @@ USUARIO_PADRAO = "ifesbiomol"
 SENHA_PADRAO = "biomol102030"
 
 
-st.set_page_config(page_title="SSR Pro v28.5", page_icon="🧬", layout="wide")
+st.set_page_config(page_title="SSR Pro v28.5.1", page_icon="🧬", layout="wide")
 st.markdown("""
 <style>
     .block-container { padding-top:1rem; padding-bottom:1rem; max-width:100% !important; }
@@ -100,10 +101,7 @@ def _nome_arquivo_seguro(texto):
 def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=None, lista_f2=None,
                             edges1=None, edges2=None, w1=0, skip1=0, skip2=0, y_guia=0):
     """
-    Gera e salva no computador a imagem do gel processado com:
-    - Linha do Laser (Verde)
-    - Linhas horizontais das bandas marcadas
-    - Retângulos verdes das presenças (1)
+    Gera e salva no computador a imagem do gel processado com marcações
     """
     try:
         _, geis_abs = garantir_pastas()
@@ -175,15 +173,13 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
         return False, str(e)
 
 def salvar_backup_local():
-    """Grava as matrizes salvas em um arquivo físico no computador e gera o Excel atualizado"""
+    """Grava as matrizes salvas no computador"""
     try:
         pasta_abs, _ = garantir_pastas()
         
-        # 1. Salva o dicionário de primers para recuperação automática do app
         with open(BACKUP_FILE, "wb") as f:
             pickle.dump(st.session_state["todas_matrizes"], f)
         
-        # 2. Gera também a planilha Excel em tempo real direto na pasta do computador
         if st.session_state["todas_matrizes"]:
             excel_data = exportar_excel_completo(
                 st.session_state["todas_matrizes"], 
@@ -196,19 +192,6 @@ def salvar_backup_local():
         return True, pasta_abs
     except Exception as e:
         return False, str(e)
-
-def carregar_backup_local():
-    """Busca se há algum backup no disco e recupera para a memória ao iniciar"""
-    if os.path.exists(BACKUP_FILE):
-        try:
-            with open(BACKUP_FILE, "rb") as f:
-                dados = pickle.load(f)
-                if isinstance(dados, dict):
-                    st.session_state["todas_matrizes"] = dados
-                    return True, len(dados)
-        except Exception:
-            pass
-    return False, 0
 
 def build_df_from_bands(bands, acessos, primer_name):
     row_names = []
@@ -226,7 +209,7 @@ def build_df_from_bands(bands, acessos, primer_name):
     return df
 
 def importar_excel_completo(file_bytes):
-    """Lê um arquivo Excel gerado pelo próprio App e o reconstrói em DataFrames válidos"""
+    """Lê um arquivo Excel gerado anteriormente e o reconstrói em DataFrames válidos"""
     try:
         wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
         sheet_name = None
@@ -299,10 +282,6 @@ def importar_excel_completo(file_bytes):
 # ============================================================
 
 def ordenar_ids(lista):
-    """
-    Ordena numericamente os IDs selecionados (ex: 1, 7, 8, 15, 22, 100...).
-    Marcadores 'L' ou 'M' ficam no início.
-    """
     if not lista:
         return []
     
@@ -318,13 +297,11 @@ def ordenar_ids(lista):
     return sorted(list(dict.fromkeys(lista)), key=chave_ordenacao)
 
 def sync_e_ordenar_f1():
-    """Callback para ordenar visualmente a Foto 1 se a opção estiver ativa"""
     if "f1_select" in st.session_state:
         if st.session_state.get("ordenar_ids_auto", True):
             st.session_state["f1_select"] = ordenar_ids(st.session_state["f1_select"])
 
 def sync_e_ordenar_f2():
-    """Callback para ordenar visualmente a Foto 2 se a opção estiver ativa"""
     if "f2_select" in st.session_state:
         if st.session_state.get("ordenar_ids_auto", True):
             st.session_state["f2_select"] = ordenar_ids(st.session_state["f2_select"])
@@ -1024,7 +1001,7 @@ def get_interactive_canvas(version=COMP_VERSION):
 
 
 # ============================================================
-#  ESTADO DA SESSÃO
+#  ESTADO DA SESSÃO (INÍCIO LIMPO — VAZIO POR PADRÃO)
 # ============================================================
 defaults = {
     "offset_y2":0, "rot_f1":0.0, "rot_f2":0.0, "escala_y2":1.0,
@@ -1032,30 +1009,23 @@ defaults = {
     "last_upload_id":None, "limpeza_nivel":"Desligado",
     "skip1":1, "skip2":0, "auto_update":True,
     "ordenar_ids_auto": True,
-    "todas_matrizes": {},
+    "todas_matrizes": {}, # Sempre inicia VAZIO (sem recuperar backups velhos)
     "f1_select": [],
     "f2_select": []
 }
 for k,v in defaults.items():
     if k not in st.session_state: st.session_state[k]=v
 
-# Exibição de mensagem pendente de importação sem congelar Python
+# Exibição da mensagem pendente de importação (sem congelar a execução)
 if "msg_import_pendente" in st.session_state:
     st.success(st.session_state["msg_import_pendente"])
     del st.session_state["msg_import_pendente"]
 
-# --- TENTA RECUPERAR BACKUP DO DISCO NA PRIMEIRA EXECUÇÃO ---
-if "backup_tentado" not in st.session_state:
-    recuperado, total_primers = carregar_backup_local()
-    st.session_state["backup_tentado"] = True
-    if recuperado and total_primers > 0:
-        st.toast(f"🔄 Backup recuperado do disco: {total_primers} primers recarregados!", icon="💾")
-
 # ============================================================
 #  INTERFACE DO APLICATIVO
 # ============================================================
-st.title("🧬 Sistema SSR — Leitor de Gel Duplo v28.5")
-st.caption("🚀 v28.5: Salvamento de Géis de Conferência (JPG) · Auto-Criar Pastas no PC · Importação com Nomes")
+st.title("🧬 Sistema SSR — Leitor de Gel Duplo v28.5.1")
+st.caption("🚀 v28.5.1: Início Limpo · Importação Sob Demanda · Salvamento de Géis de Conferência (JPG)")
 
 pasta_bkp_abs, pasta_geis_abs = garantir_pastas()
 with st.expander("📁 Exibir caminhos de salvamento neste computador"):
@@ -1080,7 +1050,7 @@ with aba1:
         st.session_state["ordenar_ids_auto"] = st.checkbox(
             "🔢 Ordenar IDs (crescente)",
             value=bool(st.session_state.get("ordenar_ids_auto", True)),
-            help="Quando marcado, organiza os números de 1 a 300 em ordem crescente. Quando desmarcado, mantém a ordem exata em que você clicou."
+            help="Organiza os números em ordem crescente."
         )
 
     with c2:
@@ -1366,7 +1336,7 @@ with aba1:
                     st.error(f"❌ Não foi possível salvar o gel: {info_gel}")
 
         with col_m2:
-            st.markdown("**📂 Continuar a partir de Planilha Pronta:**\nImporte um Excel gerado anteriormente pelo App para continuar editando de onde parou:")
+            st.markdown("**📂 Continuar a partir de Planilha Pronta:**\nImporte um Excel gerado anteriormente pelo App para carregar os primers:")
             arq_excel_a1 = st.file_uploader("Selecionar planilha Excel para carregar dados:", type=["xlsx"], key="importar_excel_a1")
             if arq_excel_a1:
                 try:
@@ -1376,8 +1346,9 @@ with aba1:
                     else:
                         st.session_state["todas_matrizes"].update(dict_primers)
                         salvar_backup_local()
-                        nomes_lidos = ", ".join(list(dict_primers.keys()))
-                        st.session_state["msg_import_pendente"] = f"✅ Planilha restaurada! {len(dict_primers)} primers carregados:\n\n**{nomes_lidos}**"
+                        lista_nomes = list(dict_primers.keys())
+                        nomes_lidos = ", ".join(lista_nomes)
+                        st.session_state["msg_import_pendente"] = f"✅ Arquivo lido com sucesso! {len(dict_primers)} primers encontrados e importados:\n\n📌 **{nomes_lidos}**"
                         st.rerun()
                 except Exception as ex:
                     st.error(f"❌ Falha crítica ao importar: {str(ex)}")
@@ -1499,8 +1470,9 @@ with aba3:
                 else:
                     st.session_state["todas_matrizes"].update(dict_primers)
                     salvar_backup_local()
-                    nomes_lidos = ", ".join(list(dict_primers.keys()))
-                    st.session_state["msg_import_pendente"] = f"✅ Planilha restaurada com sucesso! Primers carregados:\n\n**{nomes_lidos}**"
+                    lista_nomes = list(dict_primers.keys())
+                    nomes_lidos = ", ".join(lista_nomes)
+                    st.session_state["msg_import_pendente"] = f"✅ Planilha restaurada com sucesso! {len(dict_primers)} primers carregados:\n\n📌 **{nomes_lidos}**"
                     st.rerun()
             except Exception as ex:
                 st.error(f"❌ Erro inesperado ao converter planilha: {str(ex)}")
@@ -1510,7 +1482,7 @@ with aba3:
     salvos = list(st.session_state.get("todas_matrizes", {}).keys())
     
     if len(salvos) == 0:
-        st.info("💡 Salve pelo menos um primer na **Aba 1 (Gerenciador de Primers)** para poder exportar.")
+        st.info("💡 Salve pelo menos um primer na **Aba 1 (Gerenciador de Primers)** ou **Importe uma planilha** para poder exportar.")
     else:
         st.markdown("### Selecione os primers para juntar no Excel:")
         primers_export = st.multiselect("Exportar os seguintes primers:", salvos, default=salvos)
@@ -1564,4 +1536,4 @@ Toda vez que você salva a matriz de um primer:
 | **Deletar Banda** | Botão Direito sobre a banda a ser apagada |
     """)
     st.divider()
-    st.success("✅ SSR Pro v28.5 — Fotos dos géis com marcações salvas automaticamente no PC para conferências futuras.")
+    st.success("✅ SSR Pro v28.5.1 — Fotos dos géis com marcações salvas automaticamente no PC para conferências futuras.")
