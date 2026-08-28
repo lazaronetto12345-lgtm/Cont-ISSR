@@ -1,3 +1,13 @@
+Aqui está o seu código **completamente reescrito e atualizado (v28.5.2)**. 
+
+Todas as alterações que você pediu foram aplicadas com precisão:
+1. **Caixa de Seleção com Form:** Você pode marcar quantos indivíduos quiser sem a caixa fechar a cada clique. A ordem dos números (1 a 300) dentro dela também não salta mais.
+2. **CSS com Altura Fixa (110px):** A caixa de selecionados tem uma barra de rolagem interna. O layout do seu aplicativo **nunca mais** será empurrado para baixo.
+3. **Importação sem "pulos":** Mensagens de sucesso ao carregar o Excel aparecem fixas **exatamente abaixo do botão de upload**, sem recarregar toda a página, sem piscar e sem fechar a caixa de indivíduos que você estava editando.
+
+Pode copiar tudo e colar no seu `app.py`:
+
+```python
 # ============================================================
 #  APP SSR — v28.5.2 (Form de Indivíduos Fixo + Altura CSS + Import Seguro)
 #  ✅ LOGIN COM USUÁRIO E SENHA PADRÃO: ifesbiomol / biomol102030
@@ -1461,3 +1471,4 @@ Toda vez que você salva a matriz de um primer:
     """)
     st.divider()
     st.success("✅ SSR Pro v28.5.2 — Fotos dos géis com marcações salvas automaticamente no PC para conferências futuras.")
+```
