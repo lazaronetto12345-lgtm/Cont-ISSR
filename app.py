@@ -1,20 +1,10 @@
-Aqui está o seu código **completamente reescrito e atualizado (v28.5.2)**. 
-
-Todas as alterações que você pediu foram aplicadas com precisão:
-1. **Caixa de Seleção com Form:** Você pode marcar quantos indivíduos quiser sem a caixa fechar a cada clique. A ordem dos números (1 a 300) dentro dela também não salta mais.
-2. **CSS com Altura Fixa (110px):** A caixa de selecionados tem uma barra de rolagem interna. O layout do seu aplicativo **nunca mais** será empurrado para baixo.
-3. **Importação sem "pulos":** Mensagens de sucesso ao carregar o Excel aparecem fixas **exatamente abaixo do botão de upload**, sem recarregar toda a página, sem piscar e sem fechar a caixa de indivíduos que você estava editando.
-
-Pode copiar tudo e colar no seu `app.py`:
-
-```python
 # ============================================================
-#  APP SSR — v28.5.2 (Form de Indivíduos Fixo + Altura CSS + Import Seguro)
-#  ✅ LOGIN COM USUÁRIO E SENHA PADRÃO: ifesbiomol / biomol102030
-#  ✅ EXCEL EM BLOCOS MULTIPRIMER: Arial 11, Centralizado, Sem Cores de Fundo
+#  APP SSR — v28.5.2 CORRIGIDO (Form Fixo + Altura CSS + Import Seguro)
+#  ✅ LOGIN: ifesbiomol / biomol102030
+#  ✅ EXCEL EM BLOCOS MULTIPRIMER: Arial 11, Centralizado, Sem Cores
 #  ✅ MODO CRIAÇÃO LIVRE DE COLUNAS (clicar, arrastar, deletar)
 #  ✅ Zoom com roda, Pan com meio/Espaço, UPGMA Multilocus e Excel
-#  ✅ Salva Géis de Conferência em JPG + Backup Físico em Qualquer PC
+#  ✅ Salva Géis de Conferência em JPG + Backup Físico
 #  ✅ Início 100% Limpo: Primers só aparecem ao importar arquivo Excel
 # ============================================================
 
@@ -63,6 +53,7 @@ st.markdown("""
     /* Evita o container expandir o layout inteiro */
     div[data-testid="stMultiSelect"] {
         min-height: 110px;
+        max-height: 110px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -156,7 +147,8 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
             if y < 0 or y >= h:
                 continue
             for col_idx, m in enumerate(marks):
-                if int(m) != 1: continue
+                if int(m) != 1: 
+                    continue
                 cx, tw = None, 20
                 if col_idx < len(lista_f1):
                     lane = col_idx + int(skip1)
@@ -166,7 +158,8 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
                     if 0 <= idx2 < len(lista_f2):
                         lane = idx2 + int(skip2)
                         cx, tw = _centro_lane(edges2, float(w1), lane)
-                if cx is None: continue
+                if cx is None: 
+                    continue
                 x1 = int(cx - tw / 2)
                 x2 = int(cx + tw / 2)
                 y1 = max(0, y - 3)
@@ -178,7 +171,8 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         caminho = os.path.join(GEIS_DIR, f"{safe}_{ts}.jpg")
         ok = cv2.imwrite(caminho, img, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
-        if not ok: return False, "Erro ao gravar o arquivo JPG."
+        if not ok: 
+            return False, "Erro ao gravar o arquivo JPG."
         return True, os.path.abspath(caminho)
     except Exception as e:
         return False, str(e)
@@ -202,8 +196,10 @@ def build_df_from_bands(bands, acessos, primer_name):
     data_rows = []
     for b in bands:
         b_label = b["band"]
-        if b_label.startswith(f"{primer_name}_"): idx_name = b_label
-        else: idx_name = f"{primer_name}_{b_label}"
+        if b_label.startswith(f"{primer_name}_"): 
+            idx_name = b_label
+        else: 
+            idx_name = f"{primer_name}_{b_label}"
         row_names.append(idx_name)
         data_rows.append(b["vals"])
     df = pd.DataFrame(data_rows, index=row_names, columns=acessos)
@@ -236,7 +232,8 @@ def importar_excel_completo(file_bytes):
             col1_val = row_cells[0].value
             vals = [c.value for c in row_cells[1:]]
             
-            if col1_val is None and all(v is None for v in vals): continue
+            if col1_val is None and all(v is None for v in vals): 
+                continue
             if col1_val is not None and all(v is None for v in vals):
                 if current_bands:
                     df = build_df_from_bands(current_bands, acessos, current_primer)
@@ -249,13 +246,18 @@ def importar_excel_completo(file_bytes):
                 band_name = str(col1_val).strip()
                 binary_vals = []
                 for v in vals:
-                    if v is None: binary_vals.append(False)
+                    if v is None: 
+                        binary_vals.append(False)
                     else:
-                        try: binary_vals.append(bool(int(float(v))))
-                        except: binary_vals.append(False)
+                        try: 
+                            binary_vals.append(bool(int(float(v))))
+                        except: 
+                            binary_vals.append(False)
                 
-                if len(binary_vals) < len(acessos): binary_vals += [False] * (len(acessos) - len(binary_vals))
-                else: binary_vals = binary_vals[:len(acessos)]
+                if len(binary_vals) < len(acessos): 
+                    binary_vals += [False] * (len(acessos) - len(binary_vals))
+                else: 
+                    binary_vals = binary_vals[:len(acessos)]
                 current_bands.append({"band": band_name, "vals": binary_vals})
                 
         if current_bands:
@@ -272,101 +274,143 @@ def importar_excel_completo(file_bytes):
 # ============================================================
 
 def ordenar_ids(lista):
-    if not lista: return []
+    if not lista: 
+        return []
     def chave_ordenacao(item):
         val = str(item).strip().upper()
-        if val in ["L", "M", "LADDER", "MARCADOR"]: return (-1, 0, val)
-        try: return (0, int(val), "")
-        except ValueError: return (1, 0, val)
+        if val in ["L", "M", "LADDER", "MARCADOR"]: 
+            return (-1, 0, val)
+        try: 
+            return (0, int(val), "")
+        except ValueError: 
+            return (1, 0, val)
     return sorted(list(dict.fromkeys(lista)), key=chave_ordenacao)
 
 def remover_sujeira(img_bgr, nivel="Desligado"):
-    if nivel == "Desligado" or img_bgr is None: return img_bgr
+    if nivel == "Desligado" or img_bgr is None: 
+        return img_bgr
     img = img_bgr.copy()
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    if nivel == "Leve":   thr_dark,thr_bright,area_max,max_dim,inpaint_r = 28,32,18,7,2
-    elif nivel == "Forte": thr_dark,thr_bright,area_max,max_dim,inpaint_r = 16,20,70,14,3
-    else:                  thr_dark,thr_bright,area_max,max_dim,inpaint_r = 22,26,40,10,2
-    fundo = cv2.GaussianBlur(gray,(31,31),0)
-    dark = cv2.subtract(fundo,gray); _,mask_dark = cv2.threshold(dark,thr_dark,255,cv2.THRESH_BINARY)
-    bright = cv2.subtract(gray,fundo); _,mask_bright = cv2.threshold(bright,thr_bright,255,cv2.THRESH_BINARY)
-    mask = cv2.bitwise_or(mask_dark,mask_bright)
-    mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN,np.ones((2,2),np.uint8),iterations=1)
-    num,labels,stats,_ = cv2.connectedComponentsWithStats(mask,connectivity=8)
+    if nivel == "Leve":   
+        thr_dark, thr_bright, area_max, max_dim, inpaint_r = 28, 32, 18, 7, 2
+    elif nivel == "Forte": 
+        thr_dark, thr_bright, area_max, max_dim, inpaint_r = 16, 20, 70, 14, 3
+    else:                  
+        thr_dark, thr_bright, area_max, max_dim, inpaint_r = 22, 26, 40, 10, 2
+    
+    fundo = cv2.GaussianBlur(gray, (31, 31), 0)
+    dark = cv2.subtract(fundo, gray)
+    _, mask_dark = cv2.threshold(dark, thr_dark, 255, cv2.THRESH_BINARY)
+    bright = cv2.subtract(gray, fundo)
+    _, mask_bright = cv2.threshold(bright, thr_bright, 255, cv2.THRESH_BINARY)
+    mask = cv2.bitwise_or(mask_dark, mask_bright)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8), iterations=1)
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     mask_final = np.zeros_like(mask)
-    for i in range(1,num):
-        area=stats[i,cv2.CC_STAT_AREA]; w=stats[i,cv2.CC_STAT_WIDTH]; h=stats[i,cv2.CC_STAT_HEIGHT]
-        aspect=(max(w,h)/max(1,min(w,h)))
-        if area<=area_max and max(w,h)<=max_dim and aspect<=3.5: mask_final[labels==i]=255
-    if np.count_nonzero(mask_final)==0: return img
-    mask_final=cv2.dilate(mask_final,np.ones((2,2),np.uint8),iterations=1)
-    return cv2.inpaint(img,mask_final,inpaintRadius=inpaint_r,flags=cv2.INPAINT_TELEA)
+    for i in range(1, num):
+        area = stats[i, cv2.CC_STAT_AREA]
+        w = stats[i, cv2.CC_STAT_WIDTH]
+        h = stats[i, cv2.CC_STAT_HEIGHT]
+        aspect = (max(w, h) / max(1, min(w, h)))
+        if area <= area_max and max(w, h) <= max_dim and aspect <= 3.5: 
+            mask_final[labels == i] = 255
+    if np.count_nonzero(mask_final) == 0: 
+        return img
+    mask_final = cv2.dilate(mask_final, np.ones((2, 2), np.uint8), iterations=1)
+    return cv2.inpaint(img, mask_final, inpaintRadius=inpaint_r, flags=cv2.INPAINT_TELEA)
 
 def aplicar_filtro_bw(img_bgr, modo_filtro, brilho, contraste):
-    gray = cv2.cvtColor(img_bgr,cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     if modo_filtro == "Preto e Branco (Invertido - Fundo Branco)":
-        proc = cv2.cvtColor(cv2.bitwise_not(gray),cv2.COLOR_GRAY2BGR)
+        proc = cv2.cvtColor(cv2.bitwise_not(gray), cv2.COLOR_GRAY2BGR)
     elif modo_filtro == "Preto e Branco (Fundo Preto)":
-        proc = cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
-    else: proc = img_bgr.copy()
-    return cv2.convertScaleAbs(proc,alpha=contraste,beta=int((brilho-1.0)*50))
+        proc = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    else: 
+        proc = img_bgr.copy()
+    return cv2.convertScaleAbs(proc, alpha=contraste, beta=int((brilho - 1.0) * 50))
 
 def transformar_imagem(img, angulo, escala, offset_y, cor_fundo):
-    h,w = img.shape[:2]
-    M = cv2.getRotationMatrix2D((w//2,h//2),angulo,escala)
-    M[1,2] += offset_y
-    return cv2.warpAffine(img,M,(w,h),borderValue=cor_fundo)
+    h, w = img.shape[:2]
+    M = cv2.getRotationMatrix2D((w // 2, h // 2), angulo, escala)
+    M[1, 2] += offset_y
+    return cv2.warpAffine(img, M, (w, h), borderValue=cor_fundo)
 
 def detectar_fundo_pocos(img_bgr):
-    gray=cv2.cvtColor(img_bgr,cv2.COLOR_BGR2GRAY); h,w=gray.shape
-    y_max_busca=max(30,int(h*0.28)); roi=gray[:y_max_busca,:]
-    roi_eq=cv2.equalizeHist(roi); roi_blur=cv2.GaussianBlur(roi_eq,(5,5),0)
-    sobel=cv2.Sobel(roi_blur,cv2.CV_64F,0,1,ksize=3); sobel=np.abs(sobel)
-    perfil=sobel.sum(axis=1); perfil=uniform_filter1d(perfil.astype(float),size=7)
-    y0=max(5,int(h*0.03)); y1=y_max_busca-2
-    if y1<=y0+5: return int(h*0.10)
-    trecho=perfil[y0:y1]; limiar=np.percentile(trecho,75); candidatos=[]
-    for i in range(2,len(trecho)-2):
-        if trecho[i]>=limiar and trecho[i]>=trecho[i-1] and trecho[i]>=trecho[i+1]:
-            candidatos.append((trecho[i],y0+i))
-    if not candidatos: return int(y0+np.argmax(trecho))
-    candidatos.sort(reverse=True,key=lambda t:t[0]); top=candidatos[:min(5,len(candidatos))]
-    y_fundo=max(top,key=lambda t:t[1])[1]; return int(min(h-1,y_fundo+2))
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    h, w = gray.shape
+    y_max_busca = max(30, int(h * 0.28))
+    roi = gray[:y_max_busca, :]
+    roi_eq = cv2.equalizeHist(roi)
+    roi_blur = cv2.GaussianBlur(roi_eq, (5, 5), 0)
+    sobel = cv2.Sobel(roi_blur, cv2.CV_64F, 0, 1, ksize=3)
+    sobel = np.abs(sobel)
+    perfil = sobel.sum(axis=1)
+    perfil = uniform_filter1d(perfil.astype(float), size=7)
+    y0 = max(5, int(h * 0.03))
+    y1 = y_max_busca - 2
+    if y1 <= y0 + 5: 
+        return int(h * 0.10)
+    trecho = perfil[y0:y1]
+    limiar = np.percentile(trecho, 75)
+    candidatos = []
+    for i in range(2, len(trecho) - 2):
+        if trecho[i] >= limiar and trecho[i] >= trecho[i - 1] and trecho[i] >= trecho[i + 1]:
+            candidatos.append((trecho[i], y0 + i))
+    if not candidatos: 
+        return int(y0 + np.argmax(trecho))
+    candidatos.sort(reverse=True, key=lambda t: t[0])
+    top = candidatos[:min(5, len(candidatos))]
+    y_fundo = max(top, key=lambda t: t[1])[1]
+    return int(min(h - 1, y_fundo + 2))
 
 def auto_calibrar(img1_bgr, img2_bgr, rot1=0.0, rot2=0.0, escala2=1.0):
-    cor=(0,0,0)
-    i1=transformar_imagem(img1_bgr,rot1,1.0,0,cor); i2=transformar_imagem(img2_bgr,rot2,escala2,0,cor)
-    h1,w1=i1.shape[:2]; h2,w2=i2.shape[:2]
-    if h2!=h1: nw2=int(w2*(h1/h2)); i2=cv2.resize(i2,(nw2,h1),interpolation=cv2.INTER_AREA)
-    y1=detectar_fundo_pocos(i1); y2=detectar_fundo_pocos(i2)
-    return int(y1-y2),int(y1),y1,y2
+    cor = (0, 0, 0)
+    i1 = transformar_imagem(img1_bgr, rot1, 1.0, 0, cor)
+    i2 = transformar_imagem(img2_bgr, rot2, escala2, 0, cor)
+    h1, w1 = i1.shape[:2]
+    h2, w2 = i2.shape[:2]
+    if h2 != h1: 
+        nw2 = int(w2 * (h1 / h2))
+        i2 = cv2.resize(i2, (nw2, h1), interpolation=cv2.INTER_AREA)
+    y1 = detectar_fundo_pocos(i1)
+    y2 = detectar_fundo_pocos(i2)
+    return int(y1 - y2), int(y1), y1, y2
 
 def calcular_jaccard(matriz):
-    n=matriz.shape[0]; dist=np.zeros((n,n))
+    n = matriz.shape[0]
+    dist = np.zeros((n, n))
     for i in range(n):
-        for j in range(i+1,n):
-            a=int(np.sum((matriz[i]==1)&(matriz[j]==1)))
-            b=int(np.sum((matriz[i]==1)&(matriz[j]==0)))
-            c=int(np.sum((matriz[i]==0)&(matriz[j]==1)))
-            d=a+b+c; dist[i,j]=0.0 if d==0 else 1.0-(a/d); dist[j,i]=dist[i,j]
+        for j in range(i + 1, n):
+            a = int(np.sum((matriz[i] == 1) & (matriz[j] == 1)))
+            b = int(np.sum((matriz[i] == 1) & (matriz[j] == 0)))
+            c = int(np.sum((matriz[i] == 0) & (matriz[j] == 1)))
+            d = a + b + c
+            dist[i, j] = 0.0 if d == 0 else 1.0 - (a / d)
+            dist[j, i] = dist[i, j]
     return dist
 
 def fazer_upgma(dist_matrix):
-    dm=dist_matrix.copy(); np.fill_diagonal(dm,0); dm=(dm+dm.T)/2
-    return linkage(squareform(dm,checks=False),method="average")
+    dm = dist_matrix.copy()
+    np.fill_diagonal(dm, 0)
+    dm = (dm + dm.T) / 2
+    return linkage(squareform(dm, checks=False), method="average")
 
 def plotar_dendrograma(Z, labels, titulo):
-    fig,ax=plt.subplots(figsize=(max(10,len(labels)*0.35),7))
-    dendrogram(Z,labels=labels,ax=ax,leaf_rotation=90,leaf_font_size=8,
-               color_threshold=0.7*max(Z[:,2]) if len(Z)>0 else 0)
-    ax.set_title(titulo,fontsize=13,fontweight="bold"); ax.set_ylabel("Dissimilaridade de Jaccard")
-    plt.tight_layout(); return fig
+    fig, ax = plt.subplots(figsize=(max(10, len(labels) * 0.35), 7))
+    dendrogram(Z, labels=labels, ax=ax, leaf_rotation=90, leaf_font_size=8,
+               color_threshold=0.7 * max(Z[:, 2]) if len(Z) > 0 else 0)
+    ax.set_title(titulo, fontsize=13, fontweight="bold")
+    ax.set_ylabel("Dissimilaridade de Jaccard")
+    plt.tight_layout()
+    return fig
 
 def carregar_imagem(uploaded):
     try:
-        data=uploaded.read(); img=cv2.imdecode(np.frombuffer(data,np.uint8),cv2.IMREAD_COLOR)
-        return img,None
-    except Exception as e: return None,str(e)
+        data = uploaded.read()
+        img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        return img, None
+    except Exception as e: 
+        return None, str(e)
 
 # ============================================================
 #  EXPORTAÇÃO EXCEL EM BLOCOS (ARIAL 11, CENTRALIZADO, SEM CORES)
@@ -377,15 +421,20 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
     
     buf = io.BytesIO()
 
-    if isinstance(primers_dict, pd.DataFrame): primers_list = [(nome_export, primers_dict)]
-    elif isinstance(primers_dict, dict): primers_list = [(p_name, df) for p_name, df in primers_dict.items()]
-    elif isinstance(primers_dict, list): primers_list = primers_dict
-    else: primers_list = [(nome_export, primers_dict)]
+    if isinstance(primers_dict, pd.DataFrame): 
+        primers_list = [(nome_export, primers_dict)]
+    elif isinstance(primers_dict, dict): 
+        primers_list = [(p_name, df) for p_name, df in primers_dict.items()]
+    elif isinstance(primers_dict, list): 
+        primers_list = primers_dict
+    else: 
+        primers_list = [(nome_export, primers_dict)]
 
     all_acessos = []
     for _, df_p in primers_list:
         for col in df_p.columns:
-            if col not in all_acessos: all_acessos.append(col)
+            if col not in all_acessos: 
+                all_acessos.append(col)
 
     if st.session_state.get("ordenar_ids_auto", True):
         all_acessos = ordenar_ids(all_acessos)
@@ -406,14 +455,17 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
         for idx_primer, (p_name, df_p) in enumerate(primers_list):
             if idx_primer == 0:
                 cell_a1 = ws1.cell(row=current_row, column=1, value=p_name)
-                cell_a1.font = font_arial_bold; cell_a1.alignment = alinhamento_centro
+                cell_a1.font = font_arial_bold
+                cell_a1.alignment = alinhamento_centro
                 for c_idx, acc in enumerate(all_acessos, start=2):
                     cell = ws1.cell(row=current_row, column=c_idx, value=acc)
-                    cell.font = font_arial_bold; cell.alignment = alinhamento_centro
+                    cell.font = font_arial_bold
+                    cell.alignment = alinhamento_centro
                 current_row += 1
             else:
                 cell_p = ws1.cell(row=current_row, column=1, value=p_name)
-                cell_p.font = font_arial_bold; cell_p.alignment = alinhamento_centro
+                cell_p.font = font_arial_bold
+                cell_p.alignment = alinhamento_centro
                 current_row += 1
 
             for band_name in df_p.index:
@@ -421,7 +473,8 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
                 band_label = s_band.split("_")[-1] if "_" in s_band else s_band
                 
                 cell_b = ws1.cell(row=current_row, column=1, value=band_label)
-                cell_b.font = font_arial_bold; cell_b.alignment = alinhamento_centro
+                cell_b.font = font_arial_bold
+                cell_b.alignment = alinhamento_centro
 
                 for c_idx, acc in enumerate(all_acessos, start=2):
                     val = 0
@@ -429,7 +482,8 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
                         v = df_p.loc[band_name, acc]
                         val = 1 if bool(v) else 0
                     cell_v = ws1.cell(row=current_row, column=c_idx, value=val)
-                    cell_v.font = font_arial; cell_v.alignment = alinhamento_centro
+                    cell_v.font = font_arial
+                    cell_v.alignment = alinhamento_centro
                 current_row += 1
             current_row += 1
 
@@ -446,11 +500,16 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
 
             for row in ws2.iter_rows():
                 for cell in row:
-                    cell.font = font_arial; cell.alignment = alinhamento_centro; cell.fill = PatternFill(fill_type=None)
-                    if isinstance(cell.value, (int, float)): cell.number_format = '0.000'
+                    cell.font = font_arial
+                    cell.alignment = alinhamento_centro
+                    cell.fill = PatternFill(fill_type=None)
+                    if isinstance(cell.value, (int, float)): 
+                        cell.number_format = '0.000'
 
-            for cell in ws2[1]: cell.font = font_arial_bold
-            for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, min_col=1, max_col=1): row[0].font = font_arial_bold
+            for cell in ws2[1]: 
+                cell.font = font_arial_bold
+            for row in ws2.iter_rows(min_row=1, max_row=ws2.max_row, min_col=1, max_col=1): 
+                row[0].font = font_arial_bold
 
             for col in ws2.columns:
                 ml = max(len(str(cell.value or "")) for cell in col)
@@ -956,17 +1015,27 @@ def get_interactive_canvas(version=COMP_VERSION):
 #  ESTADO DA SESSÃO (INÍCIO LIMPO — VAZIO POR PADRÃO)
 # ============================================================
 defaults = {
-    "offset_y2":0, "rot_f1":0.0, "rot_f2":0.0, "escala_y2":1.0,
-    "pos_laser":100, "auto_ok":False, "y1_det":None, "y2_det":None,
-    "last_upload_id":None, "limpeza_nivel":"Desligado",
-    "skip1":1, "skip2":0, "auto_update":True,
+    "offset_y2": 0, 
+    "rot_f1": 0.0, 
+    "rot_f2": 0.0, 
+    "escala_y2": 1.0,
+    "pos_laser": 100, 
+    "auto_ok": False, 
+    "y1_det": None, 
+    "y2_det": None,
+    "last_upload_id": None, 
+    "limpeza_nivel": "Desligado",
+    "skip1": 1, 
+    "skip2": 0, 
+    "auto_update": True,
     "ordenar_ids_auto": True,
     "todas_matrizes": {}, 
     "f1_select": [],
     "f2_select": []
 }
-for k,v in defaults.items():
-    if k not in st.session_state: st.session_state[k]=v
+for k, v in defaults.items():
+    if k not in st.session_state: 
+        st.session_state[k] = v
 
 # ============================================================
 #  INTERFACE DO APLICATIVO
@@ -979,7 +1048,7 @@ with st.expander("📁 Exibir caminhos de salvamento neste computador"):
     st.write(f"**Backup e Planilhas:** `{pasta_bkp_abs}`")
     st.write(f"**Fotos dos Géis com Marcações:** `{pasta_geis_abs}`")
 
-aba1,aba2,aba3,aba4 = st.tabs(["📋 1. Calibração e Marcação","📊 2. Dendrograma UPGMA","📥 3. Exportar / Importar Excel","❓ 4. Ajuda"])
+aba1, aba2, aba3, aba4 = st.tabs(["📋 1. Calibração e Marcação", "📊 2. Dendrograma UPGMA", "📥 3. Exportar / Importar Excel", "❓ 4. Ajuda"])
 
 with aba1:
     st.header("⚙️ Configuração das Amostras")
@@ -991,7 +1060,7 @@ with aba1:
         nome_primer = st.text_input("Nome do Primer:", value="ISSR 19")
         st.session_state["auto_update"] = st.checkbox(
             "⚡ Atualização automática",
-            value=bool(st.session_state.get("auto_update",True)),
+            value=bool(st.session_state.get("auto_update", True)),
             help="Quando ligado, mudanças no canvas atualizam a matriz na hora."
         )
         st.session_state["ordenar_ids_auto"] = st.checkbox(
@@ -1032,187 +1101,227 @@ with aba1:
     # Exibição do total limpa sem expandir altura
     s1, s2, s3 = st.columns(3)
     with s1: 
-        if lista_f1: st.success(f"Foto 1: {len(lista_f1)} selecionados")
-        else: st.warning("Foto 1: nenhum selecionado")
+        if lista_f1: 
+            st.success(f"Foto 1: {len(lista_f1)} selecionados")
+        else: 
+            st.warning("Foto 1: nenhum selecionado")
     with s2: 
-        if lista_f2: st.success(f"Foto 2: {len(lista_f2)} selecionados")
-        else: st.warning("Foto 2: nenhum selecionado")
+        if lista_f2: 
+            st.success(f"Foto 2: {len(lista_f2)} selecionados")
+        else: 
+            st.warning("Foto 2: nenhum selecionado")
     with s3: 
         lista_uni = list(dict.fromkeys(lista_f1 + lista_f2)) if (lista_f1 or lista_f2) else []
         st.info(f"Total único de indivíduos: {len(lista_uni)}")
 
     st.divider()
     st.header("📸 Upload das Fotos")
-    cu1,cu2=st.columns(2)
-    with cu1: foto1=st.file_uploader("FOTO 1 (Esquerda)",type=["png","jpg","jpeg","tif"])
-    with cu2: foto2=st.file_uploader("FOTO 2 (Direita)",type=["png","jpg","jpeg","tif"])
+    cu1, cu2 = st.columns(2)
+    with cu1: 
+        foto1 = st.file_uploader("FOTO 1 (Esquerda)", type=["png", "jpg", "jpeg", "tif"])
+    with cu2: 
+        foto2 = st.file_uploader("FOTO 2 (Direita)", type=["png", "jpg", "jpeg", "tif"])
 
     if foto1 and foto2 and lista_f1 and lista_f2:
-        img1,er1=carregar_imagem(foto1); img2,er2=carregar_imagem(foto2)
-        if img1 is None: st.error(f"❌ Foto 1: {er1}"); st.stop()
-        if img2 is None: st.error(f"❌ Foto 2: {er2}"); st.stop()
-        upload_id=f"{foto1.name}_{foto1.size}_{foto2.name}_{foto2.size}"
+        img1, er1 = carregar_imagem(foto1)
+        img2, er2 = carregar_imagem(foto2)
+        if img1 is None: 
+            st.error(f"❌ Foto 1: {er1}")
+            st.stop()
+        if img2 is None: 
+            st.error(f"❌ Foto 2: {er2}")
+            st.stop()
+        upload_id = f"{foto1.name}_{foto1.size}_{foto2.name}_{foto2.size}"
 
-        st.markdown("---"); st.subheader("🧹 Limpeza de Sujeira do Gel")
-        cl1,cl2,cl3=st.columns([2,2,3])
+        st.markdown("---")
+        st.subheader("🧹 Limpeza de Sujeira do Gel")
+        cl1, cl2, cl3 = st.columns([2, 2, 3])
         with cl1:
-            st.session_state["limpeza_nivel"]=st.selectbox(
-                "Intensidade:",["Desligado","Leve","Médio","Forte"],
-                index=["Desligado","Leve","Médio","Forte"].index(st.session_state["limpeza_nivel"]))
-        with cl2: aplicar_antes_cor=st.checkbox("Aplicar antes do filtro de cor",value=True)
+            st.session_state["limpeza_nivel"] = st.selectbox(
+                "Intensidade:", ["Desligado", "Leve", "Médio", "Forte"],
+                index=["Desligado", "Leve", "Médio", "Forte"].index(st.session_state["limpeza_nivel"]))
+        with cl2: 
+            aplicar_antes_cor = st.checkbox("Aplicar antes do filtro de cor", value=True)
         with cl3:
-            if st.session_state["limpeza_nivel"]!="Desligado":
+            if st.session_state["limpeza_nivel"] != "Desligado":
                 st.info(f"🧹 Modo **{st.session_state['limpeza_nivel']}** ativado")
 
-        img1_work=remover_sujeira(img1,st.session_state["limpeza_nivel"]) if aplicar_antes_cor else img1.copy()
-        img2_work=remover_sujeira(img2,st.session_state["limpeza_nivel"]) if aplicar_antes_cor else img2.copy()
+        img1_work = remover_sujeira(img1, st.session_state["limpeza_nivel"]) if aplicar_antes_cor else img1.copy()
+        img2_work = remover_sujeira(img2, st.session_state["limpeza_nivel"]) if aplicar_antes_cor else img2.copy()
 
-        st.markdown("---"); st.subheader("🛠️ Calibração Vertical")
-        colA,colB=st.columns([2,3])
+        st.markdown("---")
+        st.subheader("🛠️ Calibração Vertical")
+        colA, colB = st.columns([2, 3])
         with colA:
-            if st.button("🎯 ALINHAR AUTOMATICAMENTE",type="primary",use_container_width=True):
-                off,ylaser,y1d,y2d=auto_calibrar(img1_work,img2_work,
-                    rot1=st.session_state["rot_f1"],rot2=st.session_state["rot_f2"],escala2=st.session_state["escala_y2"])
-                st.session_state.update({"offset_y2":off,"pos_laser":ylaser,"y1_det":y1d,"y2_det":y2d,"auto_ok":True,"last_upload_id":upload_id})
+            if st.button("🎯 ALINHAR AUTOMATICAMENTE", type="primary", use_container_width=True):
+                off, ylaser, y1d, y2d = auto_calibrar(img1_work, img2_work,
+                    rot1=st.session_state["rot_f1"], rot2=st.session_state["rot_f2"], escala2=st.session_state["escala_y2"])
+                st.session_state.update({"offset_y2": off, "pos_laser": ylaser, "y1_det": y1d, "y2_det": y2d, "auto_ok": True, "last_upload_id": upload_id})
                 st.rerun()
-            if st.session_state["last_upload_id"]!=upload_id:
-                off,ylaser,y1d,y2d=auto_calibrar(img1_work,img2_work)
-                st.session_state.update({"offset_y2":off,"pos_laser":ylaser,"y1_det":y1d,"y2_det":y2d,"auto_ok":True,"last_upload_id":upload_id})
+            if st.session_state["last_upload_id"] != upload_id:
+                off, ylaser, y1d, y2d = auto_calibrar(img1_work, img2_work)
+                st.session_state.update({"offset_y2": off, "pos_laser": ylaser, "y1_det": y1d, "y2_det": y2d, "auto_ok": True, "last_upload_id": upload_id})
                 st.rerun()
         with colB:
             if st.session_state["auto_ok"]:
                 st.success(f"✅ F1 Y={st.session_state['y1_det']} | F2 Y={st.session_state['y2_det']} | Offset={st.session_state['offset_y2']}px")
 
-        cc1,cc2,cc3=st.columns([2,3,3])
+        cc1, cc2, cc3 = st.columns([2, 3, 3])
         with cc1:
             st.markdown("🎯 **Ajuste Fino Vertical**")
-            b1,b2,b3,b4=st.columns(4)
-            if b1.button("⬆️+10"): st.session_state["offset_y2"]-=10; st.rerun()
-            if b2.button("⬆️+1"):  st.session_state["offset_y2"]-=1;  st.rerun()
-            if b3.button("⬇️-1"):  st.session_state["offset_y2"]+=1;  st.rerun()
-            if b4.button("⬇️-10"): st.session_state["offset_y2"]+=10; st.rerun()
-            st.session_state["offset_y2"]=st.number_input("Deslocamento Y:",value=int(st.session_state["offset_y2"]),step=1)
+            b1, b2, b3, b4 = st.columns(4)
+            if b1.button("⬆️+10"): 
+                st.session_state["offset_y2"] -= 10
+                st.rerun()
+            if b2.button("⬆️+1"):  
+                st.session_state["offset_y2"] -= 1
+                st.rerun()
+            if b3.button("⬇️-1"):  
+                st.session_state["offset_y2"] += 1
+                st.rerun()
+            if b4.button("⬇️-10"): 
+                st.session_state["offset_y2"] += 10
+                st.rerun()
+            st.session_state["offset_y2"] = st.number_input("Deslocamento Y:", value=int(st.session_state["offset_y2"]), step=1)
         with cc2:
             st.markdown("📏 **Laser + Filtro**")
-            st.session_state["pos_laser"]=st.slider("Altura Linha Guia:",5,500,int(st.session_state["pos_laser"]),1)
-            filtro_cor=st.selectbox("Filtro de Cor:",["Original","Preto e Branco (Fundo Preto)","Preto e Branco (Invertido - Fundo Branco)"])
+            st.session_state["pos_laser"] = st.slider("Altura Linha Guia:", 5, 500, int(st.session_state["pos_laser"]), 1)
+            filtro_cor = st.selectbox("Filtro de Cor:", ["Original", "Preto e Branco (Fundo Preto)", "Preto e Branco (Invertido - Fundo Branco)"])
         with cc3:
             st.markdown("🔄 **Rotação**")
-            st.session_state["rot_f1"]=st.slider("Rotação F1 (°):",-10.0,10.0,float(st.session_state["rot_f1"]),0.1)
-            st.session_state["rot_f2"]=st.slider("Rotação F2 (°):",-10.0,10.0,float(st.session_state["rot_f2"]),0.1)
-            if st.button("🔁 Recalibrar",use_container_width=True):
-                off,ylaser,y1d,y2d=auto_calibrar(img1_work,img2_work,rot1=st.session_state["rot_f1"],rot2=st.session_state["rot_f2"],escala2=st.session_state["escala_y2"])
-                st.session_state.update({"offset_y2":off,"pos_laser":ylaser,"auto_ok":True}); st.rerun()
+            st.session_state["rot_f1"] = st.slider("Rotação F1 (°):", -10.0, 10.0, float(st.session_state["rot_f1"]), 0.1)
+            st.session_state["rot_f2"] = st.slider("Rotação F2 (°):", -10.0, 10.0, float(st.session_state["rot_f2"]), 0.1)
+            if st.button("🔁 Recalibrar", use_container_width=True):
+                off, ylaser, y1d, y2d = auto_calibrar(img1_work, img2_work, rot1=st.session_state["rot_f1"], rot2=st.session_state["rot_f2"], escala2=st.session_state["escala_y2"])
+                st.session_state.update({"offset_y2": off, "pos_laser": ylaser, "auto_ok": True})
+                st.rerun()
 
         with st.expander("🔍 Ajustes Adicionais"):
-            ce1,ce2=st.columns(2)
+            ce1, ce2 = st.columns(2)
             with ce1:
-                brilho=st.slider("Brilho:",0.5,3.0,1.0,0.1)
-                contraste=st.slider("Contraste:",0.5,3.0,1.0,0.1)
+                brilho = st.slider("Brilho:", 0.5, 3.0, 1.0, 0.1)
+                contraste = st.slider("Contraste:", 0.5, 3.0, 1.0, 0.1)
             with ce2:
-                st.session_state["escala_y2"]=st.slider("Escala F2 (%):",80.0,120.0,float(st.session_state["escala_y2"]*100),0.5)/100.0
+                st.session_state["escala_y2"] = st.slider("Escala F2 (%):", 80.0, 120.0, float(st.session_state["escala_y2"] * 100), 0.5) / 100.0
 
-        cor_fundo=(255,255,255) if "Invertido" in filtro_cor else (0,0,0)
-        img1_p=aplicar_filtro_bw(img1_work,filtro_cor,brilho,contraste)
-        img2_p=aplicar_filtro_bw(img2_work,filtro_cor,brilho,contraste)
+        cor_fundo = (255, 255, 255) if "Invertido" in filtro_cor else (0, 0, 0)
+        img1_p = aplicar_filtro_bw(img1_work, filtro_cor, brilho, contraste)
+        img2_p = aplicar_filtro_bw(img2_work, filtro_cor, brilho, contraste)
         if not aplicar_antes_cor:
-            img1_p=remover_sujeira(img1_p,st.session_state["limpeza_nivel"])
-            img2_p=remover_sujeira(img2_p,st.session_state["limpeza_nivel"])
-        img1_t=transformar_imagem(img1_p,st.session_state["rot_f1"],1.0,0,cor_fundo)
-        img2_t=transformar_imagem(img2_p,st.session_state["rot_f2"],st.session_state["escala_y2"],st.session_state["offset_y2"],cor_fundo)
-        h1,w1=img1_t.shape[:2]; h2,w2=img2_t.shape[:2]
-        if h2!=h1:
-            nw2=int(w2*(h1/h2)); img2_t=cv2.resize(img2_t,(nw2,h1),interpolation=cv2.INTER_AREA)
-        cv2.line(img1_t,(w1-2,0),(w1-2,h1),(255,150,0),3)
-        cv2.line(img2_t,(1,0),(1,h1),(255,150,0),3)
-        img_unida=cv2.hconcat([img1_t,img2_t])
-        img_rgb=cv2.cvtColor(img_unida,cv2.COLOR_BGR2RGB)
-        _,buffer=cv2.imencode(".jpg",img_rgb,[cv2.IMWRITE_JPEG_QUALITY,96])
-        img_b64=base64.b64encode(buffer).decode()
+            img1_p = remover_sujeira(img1_p, st.session_state["limpeza_nivel"])
+            img2_p = remover_sujeira(img2_p, st.session_state["limpeza_nivel"])
+        img1_t = transformar_imagem(img1_p, st.session_state["rot_f1"], 1.0, 0, cor_fundo)
+        img2_t = transformar_imagem(img2_p, st.session_state["rot_f2"], st.session_state["escala_y2"], st.session_state["offset_y2"], cor_fundo)
+        h1, w1 = img1_t.shape[:2]
+        h2, w2 = img2_t.shape[:2]
+        if h2 != h1:
+            nw2 = int(w2 * (h1 / h2))
+            img2_t = cv2.resize(img2_t, (nw2, h1), interpolation=cv2.INTER_AREA)
+        cv2.line(img1_t, (w1 - 2, 0), (w1 - 2, h1), (255, 150, 0), 3)
+        cv2.line(img2_t, (1, 0), (1, h1), (255, 150, 0), 3)
+        img_unida = cv2.hconcat([img1_t, img2_t])
+        img_rgb = cv2.cvtColor(img_unida, cv2.COLOR_BGR2RGB)
+        _, buffer = cv2.imencode(".jpg", img_rgb, [cv2.IMWRITE_JPEG_QUALITY, 96])
+        img_b64 = base64.b64encode(buffer).decode()
 
         with st.expander("🧭 Pular colunas iniciais (ladder/controle)"):
-            col_s1,col_s2=st.columns(2)
-            with col_s1: st.session_state["skip1"]=st.number_input("F1 — colunas a pular",0,10,int(st.session_state["skip1"]),1)
-            with col_s2: st.session_state["skip2"]=st.number_input("F2 — colunas a pular",0,10,int(st.session_state["skip2"]),1)
+            col_s1, col_s2 = st.columns(2)
+            with col_s1: 
+                st.session_state["skip1"] = st.number_input("F1 — colunas a pular", 0, 10, int(st.session_state["skip1"]), 1)
+            with col_s2: 
+                st.session_state["skip2"] = st.number_input("F2 — colunas a pular", 0, 10, int(st.session_state["skip2"]), 1)
 
-        st.divider(); st.subheader("🔬 Visualizador Interativo")
+        st.divider()
+        st.subheader("🔬 Visualizador Interativo")
         
-        largura_panoramica=st.slider("Tamanho Inicial (px):",1000,6000,2600,100)
+        largura_panoramica = st.slider("Tamanho Inicial (px):", 1000, 6000, 2600, 100)
 
-        cols1=len(lista_f1)+int(st.session_state["skip1"])
-        cols2=len(lista_f2)+int(st.session_state["skip2"])
-        canvas_key=f"canvas_{upload_id}"
+        cols1 = len(lista_f1) + int(st.session_state["skip1"])
+        cols2 = len(lista_f2) + int(st.session_state["skip2"])
+        canvas_key = f"canvas_{upload_id}"
 
         if f"edges1_{canvas_key}" in st.session_state:
-            edges1_init=st.session_state[f"edges1_{canvas_key}"]
+            edges1_init = st.session_state[f"edges1_{canvas_key}"]
         else:
-            edges1_init=np.linspace(0,w1,cols1+1).round().astype(int).tolist()
+            edges1_init = np.linspace(0, w1, cols1 + 1).round().astype(int).tolist()
 
         if f"edges2_{canvas_key}" in st.session_state:
-            edges2_init=st.session_state[f"edges2_{canvas_key}"]
+            edges2_init = st.session_state[f"edges2_{canvas_key}"]
         else:
-            edges2_init=np.linspace(0,img2_t.shape[1],cols2+1).round().astype(int).tolist()
+            edges2_init = np.linspace(0, img2_t.shape[1], cols2 + 1).round().astype(int).tolist()
 
-        interactive_canvas=get_interactive_canvas()
-        canvas_result=interactive_canvas(
+        interactive_canvas = get_interactive_canvas()
+        canvas_result = interactive_canvas(
             img_b64=img_b64, w1=int(w1), w2=int(img2_t.shape[1]),
             y_guia=int(st.session_state["pos_laser"]),
             list1=lista_f1, list2=lista_f2,
             largura_inicial=int(largura_panoramica),
             skip1=int(st.session_state["skip1"]), skip2=int(st.session_state["skip2"]),
             edges1=edges1_init, edges2=edges2_init,
-            bandas_init=st.session_state.get(f"bandas_{canvas_key}",[]),
+            bandas_init=st.session_state.get(f"bandas_{canvas_key}", []),
             key=canvas_key
         )
 
-        auto_upd=bool(st.session_state.get("auto_update",True))
-        if canvas_result and isinstance(canvas_result,dict):
-            changed=False
-            if "bandas" in canvas_result and canvas_result["bandas"]!=st.session_state.get(f"bandas_{canvas_key}",[]):
-                st.session_state[f"bandas_{canvas_key}"]=canvas_result["bandas"]; changed=True
-            e1_res=canvas_result.get("calib_edges1")
-            e2_res=canvas_result.get("calib_edges2")
-            if e1_res is not None and e1_res!=st.session_state.get(f"edges1_{canvas_key}"):
-                st.session_state[f"edges1_{canvas_key}"]=e1_res; changed=True
-            if e2_res is not None and e2_res!=st.session_state.get(f"edges2_{canvas_key}"):
-                st.session_state[f"edges2_{canvas_key}"]=e2_res; changed=True
+        auto_upd = bool(st.session_state.get("auto_update", True))
+        if canvas_result and isinstance(canvas_result, dict):
+            changed = False
+            if "bandas" in canvas_result and canvas_result["bandas"] != st.session_state.get(f"bandas_{canvas_key}", []):
+                st.session_state[f"bandas_{canvas_key}"] = canvas_result["bandas"]
+                changed = True
+            e1_res = canvas_result.get("calib_edges1")
+            e2_res = canvas_result.get("calib_edges2")
+            if e1_res is not None and e1_res != st.session_state.get(f"edges1_{canvas_key}"):
+                st.session_state[f"edges1_{canvas_key}"] = e1_res
+                changed = True
+            if e2_res is not None and e2_res != st.session_state.get(f"edges2_{canvas_key}"):
+                st.session_state[f"edges2_{canvas_key}"] = e2_res
+                changed = True
             if changed and auto_upd:
                 st.rerun()
 
-        bandas_salvas=st.session_state.get(f"bandas_{canvas_key}",[])
-        num_canvas_bands=len(bandas_salvas)
+        bandas_salvas = st.session_state.get(f"bandas_{canvas_key}", [])
+        num_canvas_bands = len(bandas_salvas)
 
-        st.divider(); st.subheader("✍️ Matriz de Leitura")
-        cm1,cm2=st.columns([2,4])
-        with cm1: n_bandas=st.number_input("Total de bandas:",min_value=1,max_value=100,value=max(1,num_canvas_bands))
-        n_real=max(n_bandas,num_canvas_bands)
-        with cm2: st.info(f"📊 **{n_real} bandas** × **{len(lista_uni)} indivíduos**")
+        st.divider()
+        st.subheader("✍️ Matriz de Leitura")
+        cm1, cm2 = st.columns([2, 4])
+        with cm1: 
+            n_bandas = st.number_input("Total de bandas:", min_value=1, max_value=100, value=max(1, num_canvas_bands))
+        n_real = max(n_bandas, num_canvas_bands)
+        with cm2: 
+            st.info(f"📊 **{n_real} bandas** × **{len(lista_uni)} indivíduos**")
 
-        letras_tabela=[chr(97+i) if i<26 else f"b{i}" for i in range(n_real)]
-        key_mat=f"matriz_dados_{nome_primer}_{upload_id}"
-        dados_bool={ind:[False]*n_real for ind in lista_uni}
-        for i,b in enumerate(bandas_salvas):
-            if i>=n_real: break
-            for col_idx,m in enumerate(b.get("marks",[])):
-                if m==1:
-                    if col_idx<len(lista_f1): ind_name=lista_f1[col_idx]
+        letras_tabela = [chr(97 + i) if i < 26 else f"b{i}" for i in range(n_real)]
+        key_mat = f"matriz_dados_{nome_primer}_{upload_id}"
+        dados_bool = {ind: [False] * n_real for ind in lista_uni}
+        for i, b in enumerate(bandas_salvas):
+            if i >= n_real: 
+                break
+            for col_idx, m in enumerate(b.get("marks", [])):
+                if m == 1:
+                    if col_idx < len(lista_f1): 
+                        ind_name = lista_f1[col_idx]
                     else:
-                        idx2=col_idx-len(lista_f1)
-                        ind_name=lista_f2[idx2] if idx2<len(lista_f2) else None
-                    if ind_name and ind_name in dados_bool: dados_bool[ind_name][i]=True
+                        idx2 = col_idx - len(lista_f1)
+                        ind_name = lista_f2[idx2] if idx2 < len(lista_f2) else None
+                    if ind_name and ind_name in dados_bool: 
+                        dados_bool[ind_name][i] = True
 
-        df_at=pd.DataFrame(dados_bool,index=letras_tabela); df_at.index.name="Banda"
-        st.session_state[key_mat]=df_at
-        df_ed=st.data_editor(st.session_state[key_mat],use_container_width=True,height=350,key=f"editor_{key_mat}")
+        df_at = pd.DataFrame(dados_bool, index=letras_tabela)
+        df_at.index.name = "Banda"
+        st.session_state[key_mat] = df_at
+        df_ed = st.data_editor(st.session_state[key_mat], use_container_width=True, height=350, key=f"editor_{key_mat}")
         
-        st.session_state["matriz_final"]=df_ed
-        st.session_state["primer_nome"]=nome_primer
+        st.session_state["matriz_final"] = df_ed
+        st.session_state["primer_nome"] = nome_primer
 
-        tm=df_ed.sum().sum(); tc=n_real*len(lista_uni); taxa=(tm/tc*100) if tc>0 else 0
-        cs1,cs2,cs3=st.columns(3)
-        cs1.metric("Total Marcado",f"{int(tm)}/{tc}")
-        cs2.metric("Taxa de Presença",f"{taxa:.1f}%")
-        cs3.metric("Bandas × Indivíduos",f"{n_real} × {len(lista_uni)}")
+        tm = df_ed.sum().sum()
+        tc = n_real * len(lista_uni)
+        taxa = (tm / tc * 100) if tc > 0 else 0
+        cs1, cs2, cs3 = st.columns(3)
+        cs1.metric("Total Marcado", f"{int(tm)}/{tc}")
+        cs2.metric("Taxa de Presença", f"{taxa:.1f}%")
+        cs3.metric("Bandas × Indivíduos", f"{n_real} × {len(lista_uni)}")
 
         # ---------------------------------------------------------
         # GERENCIADOR DE PRIMERS (SALVA MATRIZ + FOTO DO GEL)
@@ -1241,7 +1350,8 @@ with aba1:
                 
                 if sucesso_backup:
                     msg = f"✅ Primer **{nome_primer}** gravado no disco!\n\n📁 **Matriz/Excel:** `{desc_caminho}`"
-                    if ok_gel: msg += f"\n\n🖼️ **Gel Processado:** `{info_gel}`"
+                    if ok_gel: 
+                        msg += f"\n\n🖼️ **Gel Processado:** `{info_gel}`"
                     st.success(msg)
                 else:
                     st.error(f"❌ Erro ao gerar backup físico em disco: {desc_caminho}")
@@ -1255,8 +1365,10 @@ with aba1:
                     w1=int(w1), skip1=int(st.session_state["skip1"]), skip2=int(st.session_state["skip2"]),
                     y_guia=int(st.session_state["pos_laser"])
                 )
-                if ok_gel: st.success(f"🖼️ Gel gravado em:\n`{info_gel}`")
-                else: st.error(f"❌ Não foi possível salvar o gel: {info_gel}")
+                if ok_gel: 
+                    st.success(f"🖼️ Gel gravado em:\n`{info_gel}`")
+                else: 
+                    st.error(f"❌ Não foi possível salvar o gel: {info_gel}")
 
         with col_m2:
             st.markdown("**📂 Continuar a partir de Planilha Pronta:**\nImporte um Excel gerado anteriormente pelo App para carregar os primers:")
@@ -1290,13 +1402,15 @@ with aba1:
             if st.button("🗑️ Limpar toda a memória de primers"):
                 st.session_state["todas_matrizes"] = {}
                 if os.path.exists(BACKUP_FILE):
-                    try: os.remove(BACKUP_FILE)
-                    except: pass
+                    try: 
+                        os.remove(BACKUP_FILE)
+                    except: 
+                        pass
                 st.rerun()
         else:
             st.caption("Nenhum primer na memória temporária.")
 
-    elif not(lista_f1 and lista_f2): 
+    elif not (lista_f1 and lista_f2): 
         st.info("💡 Selecione os indivíduos de cada foto (caixas acima) para poder enviar as imagens.")
     else: 
         st.info("💡 Faça upload das duas fotos para iniciar.")
@@ -1358,7 +1472,7 @@ with aba2:
                     ix = np.unravel_index(np.argmax(aux), aux.shape)
                     st.success(f"🧬 **{acessos[ix[0]]}** × **{acessos[ix[1]]}**\n\n📊 Dissimilaridade: **{aux[ix]:.3f}**")
                     with st.expander("🔝 Top 5"):
-                        pares = sorted([(acessos[i], acessos[j], dj[i,j]) for i in range(len(acessos)) for j in range(i+1, len(acessos))], key=lambda x: x[2], reverse=True)
+                        pares = sorted([(acessos[i], acessos[j], dj[i, j]) for i in range(len(acessos)) for j in range(i + 1, len(acessos))], key=lambda x: x[2], reverse=True)
                         for r, (a1, a2, d) in enumerate(pares[:5], 1):
                             st.write(f"**{r}.** {a1} × {a2} → {d:.3f}")
                 with ce2:
@@ -1366,9 +1480,9 @@ with aba2:
                     ni = mat_bin.shape[0]
                     rows = []
                     for j in range(mat_bin.shape[1]):
-                        p = np.sum(mat_bin[:,j]) / ni
-                        pv = 1 - p**2 - (1-p)**2
-                        rows.append({"Banda": bandas_l[j], "Freq(1)": round(p,3), "PIC": round(pv,3), "Info": "✓" if pv > 0.25 else "✗"})
+                        p = np.sum(mat_bin[:, j]) / ni
+                        pv = 1 - p**2 - (1 - p)**2
+                        rows.append({"Banda": bandas_l[j], "Freq(1)": round(p, 3), "PIC": round(pv, 3), "Info": "✓" if pv > 0.25 else "✗"})
                     df_pic = pd.DataFrame(rows)
                     st.dataframe(df_pic.style.background_gradient(subset=['PIC'], cmap='RdYlGn'), use_container_width=True, hide_index=True)
                     st.metric("PIC Médio Geral", f"{df_pic['PIC'].mean():.3f}")
@@ -1419,7 +1533,7 @@ with aba3:
         st.info("💡 Salve pelo menos um primer na **Aba 1 (Gerenciador de Primers)** ou **Importe uma planilha** para poder exportar.")
     else:
         st.markdown("### Selecione os primers para juntar no Excel:")
-        primers_export = st.multiselect("Exportar os seguintes primers:", salvos, default=salvos)
+        primers_export = st.multiselect("Exportar os seguintes primers:", salvos, default=salvos, key="export_multiselect")
         
         if primers_export:
             dict_export = {p: st.session_state["todas_matrizes"][p] for p in primers_export}
@@ -1443,14 +1557,20 @@ with aba3:
             
             cb1, cb2 = st.columns([1, 2])
             with cb1:
-                st.download_button("Planilha Gerada - Download Excel Completo", buf, f"SSR_{nome_export}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                st.download_button(
+                    "📥 Baixar Planilha Excel Completa", 
+                    buf, 
+                    f"SSR_{nome_export}.xlsx", 
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    use_container_width=True
+                )
             with cb2:
                 st.success(f"✅ Excel gerado com {len(df_combined)} bandas unidas × {len(acessos)} indivíduos únicos.")
 
 
 with aba4:
     st.header("❓ Guia de Uso")
-    st.markdown(f"""
+    st.markdown("""
 ### 🚨 Como Funciona o Salvamento de Géis de Conferência?
 Toda vez que você salva a matriz de um primer:
 1. O sistema cria automaticamente a pasta `ssr_resultados_salvos/geis/`.
@@ -1471,4 +1591,3 @@ Toda vez que você salva a matriz de um primer:
     """)
     st.divider()
     st.success("✅ SSR Pro v28.5.2 — Fotos dos géis com marcações salvas automaticamente no PC para conferências futuras.")
-```
