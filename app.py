@@ -1,5 +1,5 @@
 # ============================================================
-#  APP SSR — v28.6.8 (Cloud-Ready / Codificacao de Bandas)
+#  APP SSR — v28.6.9 (Cloud-Ready / Controles Padronizados +/-)
 #  LOGIN: ifesbiomol / biomol102030
 #  Estrutura: Desktop/ssr_resultados/Cultura/Primer/arquivos
 #  Nova pasta: Codificacao de bandas (Excel + TXT Ent-<Cultura>.txt)
@@ -35,7 +35,7 @@ from datetime import datetime
 USUARIO_PADRAO = "ifesbiomol"
 SENHA_PADRAO = "biomol102030"
 
-st.set_page_config(page_title="SSR Pro v28.6.8", page_icon=None, layout="wide")
+st.set_page_config(page_title="SSR Pro v28.6.9", page_icon=None, layout="wide")
 
 # ============================================================
 #  CSS DE AJUSTE DE LAYOUT E DROPDOWN
@@ -1231,7 +1231,7 @@ canvas.addEventListener('auxclick',e=>{ if(e.button===1) e.preventDefault(); });
 </html>
 """
 
-COMP_VERSION = "v28_6_8_" + hashlib.md5(HTML_TEMPLATE.encode("utf-8")).hexdigest()[:10]
+COMP_VERSION = "v28_6_9_" + hashlib.md5(HTML_TEMPLATE.encode("utf-8")).hexdigest()[:10]
 
 def _component_dir():
     """Garante que a pasta do componente web seja criada de forma segura na nuvem."""
@@ -1260,7 +1260,7 @@ def get_interactive_canvas(version=COMP_VERSION):
 
 
 # ============================================================
-#  ESTADO DA SESSÃO
+#  ESTADO DA SESSAO
 # ============================================================
 defaults = {
     "offset_y2": 0,
@@ -1279,6 +1279,8 @@ defaults = {
     "todas_matrizes": {},
     "ms_f1": [],
     "ms_f2": [],
+    "brilho_val": 1.0,
+    "contraste_val": 1.0,
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -1306,7 +1308,7 @@ def _on_change_ordenar():
 # ============================================================
 #  INTERFACE DO APLICATIVO
 # ============================================================
-st.title("Sistema SSR — Leitor de Gel Duplo v28.6.8")
+st.title("Sistema SSR — Leitor de Gel Duplo v28.6.9")
 
 nome_cultura_input = st.text_input(
     "Nome da Cultura / Material (ex: Milho, Feijao, Cafe):",
@@ -1437,35 +1439,98 @@ with aba1:
                 )
 
         # -------------------------------------------------------------
-        # Menus Expansíveis de Ajuste (Padronizados)
+        # Controles Manuais de Calibracao - Padronizado com +/-
         # -------------------------------------------------------------
         
         with st.expander("Controles Manuais de Calibracao"):
-            cc1, cc2, cc3 = st.columns([2, 3, 3])
+            cc1, cc2, cc3 = st.columns([2, 2, 3])
+
+            # ------------------------------------------------
+            # AJUSTE FINO VERTICAL (Deslocamento Y)
+            # ------------------------------------------------
             with cc1:
                 st.markdown("**Ajuste Fino Vertical**")
                 b1, b2, b3, b4 = st.columns(4)
-                if b1.button("+10"):
+                if b1.button("+10", key="dy_p10"):
                     st.session_state["offset_y2"] -= 10; st.rerun()
-                if b2.button("+1"):
+                if b2.button("+1", key="dy_p1"):
                     st.session_state["offset_y2"] -= 1; st.rerun()
-                if b3.button("-1"):
+                if b3.button("-1", key="dy_m1"):
                     st.session_state["offset_y2"] += 1; st.rerun()
-                if b4.button("-10"):
+                if b4.button("-10", key="dy_m10"):
                     st.session_state["offset_y2"] += 10; st.rerun()
                 st.session_state["offset_y2"] = st.number_input(
-                    "Deslocamento Y:", value=int(st.session_state["offset_y2"]), step=1)
+                    "Deslocamento Y:",
+                    value=int(st.session_state["offset_y2"]),
+                    step=1,
+                    key="num_offset_y2"
+                )
+
+            # ------------------------------------------------
+            # POSICAO DO LASER (Altura Linha Guia)
+            # ------------------------------------------------
             with cc2:
                 st.markdown("**Posicao do Laser**")
-                st.session_state["pos_laser"] = st.slider(
-                    "Altura Linha Guia:", 5, 500, int(st.session_state["pos_laser"]), 1)
+                lb1, lb2, lb3, lb4 = st.columns(4)
+                if lb1.button("+10", key="laser_p10"):
+                    st.session_state["pos_laser"] = min(500, int(st.session_state["pos_laser"]) + 10); st.rerun()
+                if lb2.button("+1", key="laser_p1"):
+                    st.session_state["pos_laser"] = min(500, int(st.session_state["pos_laser"]) + 1); st.rerun()
+                if lb3.button("-1", key="laser_m1"):
+                    st.session_state["pos_laser"] = max(5, int(st.session_state["pos_laser"]) - 1); st.rerun()
+                if lb4.button("-10", key="laser_m10"):
+                    st.session_state["pos_laser"] = max(5, int(st.session_state["pos_laser"]) - 10); st.rerun()
+                st.session_state["pos_laser"] = st.number_input(
+                    "Altura Linha Guia:",
+                    min_value=5, max_value=500,
+                    value=int(st.session_state["pos_laser"]),
+                    step=1,
+                    key="num_pos_laser"
+                )
+
+            # ------------------------------------------------
+            # ROTACAO F1 e F2
+            # ------------------------------------------------
             with cc3:
-                st.markdown("**Rotacao**")
-                st.session_state["rot_f1"] = st.slider(
-                    "Rotacao F1 (graus):", -10.0, 10.0, float(st.session_state["rot_f1"]), 0.1)
-                st.session_state["rot_f2"] = st.slider(
-                    "Rotacao F2 (graus):", -10.0, 10.0, float(st.session_state["rot_f2"]), 0.1)
-                if st.button("Recalibrar", use_container_width=True):
+                st.markdown("**Rotacao F1 (graus)**")
+                r1a, r1b, r1c, r1d = st.columns(4)
+                if r1a.button("+1.0", key="rf1_p10"):
+                    st.session_state["rot_f1"] = round(min(10.0, float(st.session_state["rot_f1"]) + 1.0), 2); st.rerun()
+                if r1b.button("+0.1", key="rf1_p1"):
+                    st.session_state["rot_f1"] = round(min(10.0, float(st.session_state["rot_f1"]) + 0.1), 2); st.rerun()
+                if r1c.button("-0.1", key="rf1_m1"):
+                    st.session_state["rot_f1"] = round(max(-10.0, float(st.session_state["rot_f1"]) - 0.1), 2); st.rerun()
+                if r1d.button("-1.0", key="rf1_m10"):
+                    st.session_state["rot_f1"] = round(max(-10.0, float(st.session_state["rot_f1"]) - 1.0), 2); st.rerun()
+                st.session_state["rot_f1"] = st.number_input(
+                    "Rotacao F1:",
+                    min_value=-10.0, max_value=10.0,
+                    value=float(st.session_state["rot_f1"]),
+                    step=0.1,
+                    format="%.2f",
+                    key="num_rot_f1"
+                )
+
+                st.markdown("**Rotacao F2 (graus)**")
+                r2a, r2b, r2c, r2d = st.columns(4)
+                if r2a.button("+1.0", key="rf2_p10"):
+                    st.session_state["rot_f2"] = round(min(10.0, float(st.session_state["rot_f2"]) + 1.0), 2); st.rerun()
+                if r2b.button("+0.1", key="rf2_p1"):
+                    st.session_state["rot_f2"] = round(min(10.0, float(st.session_state["rot_f2"]) + 0.1), 2); st.rerun()
+                if r2c.button("-0.1", key="rf2_m1"):
+                    st.session_state["rot_f2"] = round(max(-10.0, float(st.session_state["rot_f2"]) - 0.1), 2); st.rerun()
+                if r2d.button("-1.0", key="rf2_m10"):
+                    st.session_state["rot_f2"] = round(max(-10.0, float(st.session_state["rot_f2"]) - 1.0), 2); st.rerun()
+                st.session_state["rot_f2"] = st.number_input(
+                    "Rotacao F2:",
+                    min_value=-10.0, max_value=10.0,
+                    value=float(st.session_state["rot_f2"]),
+                    step=0.1,
+                    format="%.2f",
+                    key="num_rot_f2"
+                )
+
+                if st.button("Recalibrar", use_container_width=True, key="btn_recalibrar"):
                     off, ylaser, y1d, y2d = auto_calibrar(
                         img1_work, img2_work,
                         rot1=st.session_state["rot_f1"],
@@ -1475,16 +1540,91 @@ with aba1:
                     st.session_state.update({"offset_y2": off, "pos_laser": ylaser, "auto_ok": True})
                     st.rerun()
 
+        # -------------------------------------------------------------
+        # Ajustes Adicionais - Padronizado com +/-
+        # -------------------------------------------------------------
+        
         with st.expander("Ajustes Adicionais"):
-            ce1, ce2 = st.columns(2)
+            ce1, ce2, ce3 = st.columns(3)
+
+            # ------------------------------------------------
+            # BRILHO
+            # ------------------------------------------------
             with ce1:
-                brilho = st.slider("Brilho:", 0.5, 3.0, 1.0, 0.1)
-                contraste = st.slider("Contraste:", 0.5, 3.0, 1.0, 0.1)
+                st.markdown("**Brilho**")
+                bb1, bb2, bb3, bb4 = st.columns(4)
+                if bb1.button("+0.5", key="bri_p10"):
+                    st.session_state["brilho_val"] = round(min(3.0, float(st.session_state["brilho_val"]) + 0.5), 2); st.rerun()
+                if bb2.button("+0.1", key="bri_p1"):
+                    st.session_state["brilho_val"] = round(min(3.0, float(st.session_state["brilho_val"]) + 0.1), 2); st.rerun()
+                if bb3.button("-0.1", key="bri_m1"):
+                    st.session_state["brilho_val"] = round(max(0.5, float(st.session_state["brilho_val"]) - 0.1), 2); st.rerun()
+                if bb4.button("-0.5", key="bri_m10"):
+                    st.session_state["brilho_val"] = round(max(0.5, float(st.session_state["brilho_val"]) - 0.5), 2); st.rerun()
+                st.session_state["brilho_val"] = st.number_input(
+                    "Brilho:",
+                    min_value=0.5, max_value=3.0,
+                    value=float(st.session_state["brilho_val"]),
+                    step=0.1,
+                    format="%.2f",
+                    key="num_brilho"
+                )
+                brilho = st.session_state["brilho_val"]
+
+            # ------------------------------------------------
+            # CONTRASTE
+            # ------------------------------------------------
             with ce2:
-                st.session_state["escala_y2"] = st.slider(
-                    "Escala F2 (percentual):", 80.0, 120.0,
-                    float(st.session_state["escala_y2"] * 100), 0.5
-                ) / 100.0
+                st.markdown("**Contraste**")
+                cb1, cb2, cb3, cb4 = st.columns(4)
+                if cb1.button("+0.5", key="con_p10"):
+                    st.session_state["contraste_val"] = round(min(3.0, float(st.session_state["contraste_val"]) + 0.5), 2); st.rerun()
+                if cb2.button("+0.1", key="con_p1"):
+                    st.session_state["contraste_val"] = round(min(3.0, float(st.session_state["contraste_val"]) + 0.1), 2); st.rerun()
+                if cb3.button("-0.1", key="con_m1"):
+                    st.session_state["contraste_val"] = round(max(0.5, float(st.session_state["contraste_val"]) - 0.1), 2); st.rerun()
+                if cb4.button("-0.5", key="con_m10"):
+                    st.session_state["contraste_val"] = round(max(0.5, float(st.session_state["contraste_val"]) - 0.5), 2); st.rerun()
+                st.session_state["contraste_val"] = st.number_input(
+                    "Contraste:",
+                    min_value=0.5, max_value=3.0,
+                    value=float(st.session_state["contraste_val"]),
+                    step=0.1,
+                    format="%.2f",
+                    key="num_contraste"
+                )
+                contraste = st.session_state["contraste_val"]
+
+            # ------------------------------------------------
+            # ESCALA F2 + FILTRO DE COR
+            # ------------------------------------------------
+            with ce3:
+                # Escala F2 em percentual (80 a 120)
+                escala_pct = int(round(float(st.session_state["escala_y2"]) * 100))
+
+                st.markdown("**Escala F2 (%)**")
+                eb1, eb2, eb3, eb4 = st.columns(4)
+                if eb1.button("+5", key="esc_p10"):
+                    escala_pct = min(120, escala_pct + 5)
+                    st.session_state["escala_y2"] = escala_pct / 100.0; st.rerun()
+                if eb2.button("+1", key="esc_p1"):
+                    escala_pct = min(120, escala_pct + 1)
+                    st.session_state["escala_y2"] = escala_pct / 100.0; st.rerun()
+                if eb3.button("-1", key="esc_m1"):
+                    escala_pct = max(80, escala_pct - 1)
+                    st.session_state["escala_y2"] = escala_pct / 100.0; st.rerun()
+                if eb4.button("-5", key="esc_m10"):
+                    escala_pct = max(80, escala_pct - 5)
+                    st.session_state["escala_y2"] = escala_pct / 100.0; st.rerun()
+                escala_pct_new = st.number_input(
+                    "Escala F2 (%):",
+                    min_value=80, max_value=120,
+                    value=int(escala_pct),
+                    step=1,
+                    key="num_escala_y2"
+                )
+                st.session_state["escala_y2"] = escala_pct_new / 100.0
+
                 filtro_cor = st.selectbox(
                     "Filtro de Cor (Opcional):",
                     [
@@ -1508,7 +1648,7 @@ with aba1:
                     "F2 — colunas a pular", 0, 10, int(st.session_state["skip2"]), 1)
 
         # -------------------------------------------------------------
-        # Aplicação dos Filtros e Transformações
+        # Aplicacao dos Filtros e Transformacoes
         # -------------------------------------------------------------
         if "Invertido" in filtro_cor:
             cor_fundo = (255, 255, 255)
@@ -1585,7 +1725,7 @@ with aba1:
             st.error(f"Falha no canvas interativo: {e}")
             st.warning("Mostrando gel em modo fallback (sem marcacao por clique na imagem). Use a matriz abaixo.")
         
-        # Se componente não renderizar (em ambiente de nuvem rígido), exibe preview fallback
+        # Se componente nao renderizar (em ambiente de nuvem rigido), exibe preview fallback
         if canvas_result is None:
             with st.expander("Preview estatico do gel (fallback visual)", expanded=False):
                 st.image(cv2.cvtColor(img_unida, cv2.COLOR_BGR2RGB), use_container_width=True)
@@ -2033,7 +2173,7 @@ with aba4:
         "| **Marcar Banda (0/1)** | Botao Esquerdo sobre o marcador verde |\n"
         "| **Deletar Banda** | Botao Direito sobre a banda |\n\n"
         "### Filtros de Cor Disponiveis\n"
-        "- **Padrao (Cor Original)** — igual à foto enviada\n"
+        "- **Padrao (Cor Original)** — igual a foto enviada\n"
         "- **Lilas/Roxo** — fundo roxo com bandas brancas (estilo UV)\n"
         "- **P&B Fundo Preto** — escala de cinza padrao\n"
         "- **P&B Invertido** — negativo, fundo branco\n"
@@ -2058,4 +2198,4 @@ with aba4:
         "5. Va ate a **Aba 3**, selecione o primer e baixe o Excel ou o arquivo TXT nos botoes indicados.\n"
     )
     st.divider()
-    st.success("SSR Pro v28.6.8 — Otimizado para Nuvem e Codificacao de Bandas!")
+    st.success("SSR Pro v28.6.9 — Controles Padronizados +/- e Otimizado para Nuvem!")
