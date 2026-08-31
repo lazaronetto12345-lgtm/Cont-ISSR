@@ -1,12 +1,12 @@
 # ============================================================
-#  APP SSR — v28.6.7 (Codificação de Bandas + TXT Transposto)
+#  APP SSR — v28.6.8 (Cloud-Ready / Codificacao de Bandas)
 #  LOGIN: ifesbiomol / biomol102030
 #  Estrutura: Desktop/ssr_resultados/Cultura/Primer/arquivos
-#  Nova pasta: Codificação de bandas (Excel + TXT Ent-<Cultura>.txt)
+#  Nova pasta: Codificacao de bandas (Excel + TXT Ent-<Cultura>.txt)
 #  EXCEL EM BLOCOS MULTIPRIMER: Arial 11, Centralizado
-#  MODO CRIAÇÃO LIVRE DE COLUNAS (clicar, arrastar, deletar)
-#  Grava JPG mesmo em caminhos com acento (OneDrive/Área de Trabalho)
-#  Filtros: Padrão, Lilás/Roxo, P&B, P&B Invertido, Amarelo Ouro
+#  MODO CRIACAO LIVRE DE COLUNAS (clicar, arrastar, deletar)
+#  Grava JPG mesmo em caminhos com acento (OneDrive/Area de Trabalho)
+#  Filtros: Padrao, Lilas/Roxo, P&B, P&B Invertido, Amarelo Ouro
 # ============================================================
 
 import streamlit as st
@@ -30,12 +30,12 @@ import openpyxl
 from datetime import datetime
 
 # ============================================================
-#  CREDENCIAIS PADRÃO DE ACESSO
+#  CREDENCIAIS PADRAO DE ACESSO
 # ============================================================
 USUARIO_PADRAO = "ifesbiomol"
 SENHA_PADRAO = "biomol102030"
 
-st.set_page_config(page_title="SSR Pro v28.6.7", page_icon=None, layout="wide")
+st.set_page_config(page_title="SSR Pro v28.6.8", page_icon=None, layout="wide")
 
 # ============================================================
 #  CSS DE AJUSTE DE LAYOUT E DROPDOWN
@@ -72,7 +72,7 @@ st.markdown("""
 
 
 # ============================================================
-#  SISTEMA DE VERIFICAÇÃO DE USUÁRIO E SENHA
+#  SISTEMA DE VERIFICACAO DE USUARIO E SENHA
 # ============================================================
 
 def verificar_autenticacao():
@@ -87,7 +87,7 @@ def verificar_autenticacao():
     with c_center:
         st.title("Acesso Restrito — SSR Pro")
         st.info("Entre com suas credenciais de acesso para acessar o sistema.")
-        usuario_digitado = st.text_input("Usuário:", key="input_usuario_acesso")
+        usuario_digitado = st.text_input("Usuario:", key="input_usuario_acesso")
         senha_digitada = st.text_input("Senha:", type="password", key="input_senha_acesso")
         if st.button("Entrar no Sistema", type="primary", use_container_width=True):
             if usuario_digitado == USUARIO_PADRAO and senha_digitada == SENHA_PADRAO:
@@ -95,7 +95,7 @@ def verificar_autenticacao():
                 st.success("Acesso liberado!")
                 st.rerun()
             else:
-                st.error("Usuário ou senha incorretos!")
+                st.error("Usuario ou senha incorretos!")
     return False
 
 if not verificar_autenticacao():
@@ -103,18 +103,39 @@ if not verificar_autenticacao():
 
 
 # ============================================================
-#  SISTEMA DE CAMINHOS — Suporta OneDrive e caminhos com acento
+#  SISTEMA DE CAMINHOS — Suporta OneDrive, acentos e Nuvem
 # ============================================================
 BASE_DIR = ""
 CULTURA_DIR = ""
 BACKUP_FILE = ""
+
+def _is_cloud():
+    """Identifica se esta rodando no Streamlit Cloud ou Linux Headless"""
+    return (
+        os.environ.get("STREAMLIT_SERVER_HEADLESS") == "true"
+        or os.path.exists("/home/appuser")
+        or os.environ.get("HOSTNAME", "").startswith("streamlit")
+    )
+
+def abrir_pasta(path):
+    """Substituto seguro para os.startfile em nuvem"""
+    if _is_cloud():
+        return
+    try:
+        os.startfile(path)
+    except Exception:
+        try:
+            import subprocess
+            subprocess.Popen(["xdg-open", path])
+        except Exception:
+            pass
 
 def _nome_arquivo_seguro(texto):
     t = str(texto).strip()
     return "".join(c if (c.isalnum() or c in " _-") else "_" for c in t).strip().replace(" ", "_") or "padrao"
 
 def _get_desktop_path():
-    """Detecta a Área de Trabalho real (local ou OneDrive)."""
+    """Detecta a Area de Trabalho real (local ou OneDrive)."""
     home = os.path.expanduser("~")
     try:
         import ctypes
@@ -128,10 +149,10 @@ def _get_desktop_path():
 
     userprofile = os.environ.get("USERPROFILE") or home
     for p in [
-        os.path.join(userprofile, "OneDrive", "Área de Trabalho"),
+        os.path.join(userprofile, "OneDrive", "Area de Trabalho"),
         os.path.join(userprofile, "OneDrive", "Desktop"),
-        os.path.join(userprofile, "OneDrive - Pessoal", "Área de Trabalho"),
-        os.path.join(userprofile, "Área de Trabalho"),
+        os.path.join(userprofile, "OneDrive - Pessoal", "Area de Trabalho"),
+        os.path.join(userprofile, "Area de Trabalho"),
         os.path.join(userprofile, "Desktop"),
         os.path.join(home, "Desktop"),
     ]:
@@ -172,7 +193,7 @@ def _salvar_jpg_unicode(caminho, img_bgr, qualidade=95):
         with open(caminho, "wb") as f:
             f.write(buf.tobytes())
         if not (os.path.isfile(caminho) and os.path.getsize(caminho) > 0):
-            return False, "arquivo não encontrado após gravação"
+            return False, "arquivo nao encontrado apos gravacao"
         return True, "ok"
     except Exception as e:
         return False, str(e)
@@ -182,7 +203,7 @@ def salvar_gel_conferencia(img_bgr, nome_primer, bandas_salvas=None, lista_f1=No
     try:
         pasta_primer = garantir_pasta_primer(nome_primer)
         if img_bgr is None:
-            return False, "Imagem base do gel não encontrada."
+            return False, "Imagem base do gel nao encontrada."
 
         img = np.ascontiguousarray(img_bgr.copy())
         h, w = img.shape[:2]
@@ -256,7 +277,7 @@ def salvar_matriz_primer(nome_primer, df_primer):
         with open(caminho_xlsx, "wb") as f:
             f.write(excel_data)
         if not (os.path.isfile(caminho_xlsx) and os.path.getsize(caminho_xlsx) > 0):
-            return False, f"Excel não encontrado após gravação: {caminho_xlsx}"
+            return False, f"Excel nao encontrado apos gravacao: {caminho_xlsx}"
         return True, os.path.abspath(caminho_xlsx)
     except Exception as e:
         return False, str(e)
@@ -272,11 +293,11 @@ def salvar_backup_global():
 
 
 # ============================================================
-#  PASTA: CODIFICAÇÃO DE BANDAS + TXT TRANSPOSTO
+#  PASTA: CODIFICACAO DE BANDAS + TXT TRANSPOSTO
 # ============================================================
 
 def garantir_pasta_codificacao():
-    """Cria a pasta 'Codificação de bandas' dentro da pasta da cultura."""
+    """Cria a pasta 'Codificacao de bandas' dentro da pasta da cultura."""
     garantir_pastas_base()
     pasta = os.path.join(CULTURA_DIR, "Codificacao de bandas")
     os.makedirs(pasta, exist_ok=True)
@@ -285,12 +306,12 @@ def garantir_pasta_codificacao():
 
 def gerar_txt_transposto(primers_dict):
     """
-    Gera TXT transposto compatível com GENES:
-    - Cada LINHA  = 1 indivíduo
+    Gera TXT transposto compativel com GENES:
+    - Cada LINHA  = 1 individuo
     - Cada COLUNA = 1 banda
     - Apenas 0 e 1
-    - Separados por EXATAMENTE um espaço (nunca '00' colado)
-    - Sem nomes, sem cabeçalho, sem linha em branco extra
+    - Separados por EXATAMENTE um espaco (nunca '00' colado)
+    - Sem nomes, sem cabecalho, sem linha em branco extra
     - CRLF (\r\n) para Windows/GENES
     """
     dfs = list(primers_dict.values())
@@ -338,7 +359,7 @@ def gerar_txt_transposto(primers_dict):
             )
         for p in partes:
             if p not in ("0", "1"):
-                raise ValueError(f"Valor inválido '{p}' na linha {i+1}.")
+                raise ValueError(f"Valor invalido '{p}' na linha {i+1}.")
 
         linhas.append(linha)
 
@@ -347,9 +368,9 @@ def gerar_txt_transposto(primers_dict):
 
 def salvar_codificacao_bandas(primers_dict, nome_cultura, dist_jaccard=None, acessos=None):
     """
-    Salva na pasta Codificação de bandas:
+    Salva na pasta Codificacao de bandas:
       1) Excel com os primers selecionados
-      2) TXT transposto Ent-<Cultura>.txt  (só 0 e 1)
+      2) TXT transposto Ent-<Cultura>.txt  (so 0 e 1)
     """
     try:
         pasta = garantir_pasta_codificacao()
@@ -399,7 +420,7 @@ def importar_excel_completo(file_bytes):
         ws = wb[sheet_name]
         first_row = [cell.value for cell in ws[1]]
         if not first_row or len(first_row) < 2:
-            return None, "A planilha parece estar vazia ou fora do formato padrão."
+            return None, "A planilha parece estar vazia ou fora do formato padrao."
 
         first_primer = str(first_row[0]).strip()
         acessos = [str(val).strip() for val in first_row[1:] if val is not None]
@@ -450,7 +471,7 @@ def importar_excel_completo(file_bytes):
 
 
 # ============================================================
-#  FUNÇÕES PYTHON DE ORDENAÇÃO E PROCESSAMENTO
+#  FUNCOES PYTHON DE ORDENACAO E PROCESSAMENTO
 # ============================================================
 
 def ordenar_ids(lista):
@@ -469,10 +490,10 @@ def ordenar_ids(lista):
 def aplicar_filtro_bw(img_bgr, modo_filtro, brilho, contraste):
     """Aplica o filtro de cor selecionado ao gel antes de exibir."""
 
-    if modo_filtro == "Padrão (Cor Original)":
+    if modo_filtro == "Padrao (Cor Original)":
         proc = img_bgr.copy()
 
-    elif modo_filtro == "Lilás/Roxo (Fundo Roxo / Bandas Brancas)":
+    elif modo_filtro == "Lilas/Roxo (Fundo Roxo / Bandas Brancas)":
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
         gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
         f = gray.astype(np.float32) / 255.0
@@ -594,7 +615,7 @@ def carregar_imagem(uploaded):
 
 
 # ============================================================
-#  EXPORTAÇÃO EXCEL EM BLOCOS (ARIAL 11, CENTRALIZADO)
+#  EXPORTACAO EXCEL EM BLOCOS (ARIAL 11, CENTRALIZADO)
 # ============================================================
 
 def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=None, acessos=None):
@@ -701,7 +722,7 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
 
 
 # ============================================================
-#  HTML CANVAS
+#  HTML CANVAS - ATUALIZADO PARA NUVEM (Blob URL e FrameHeight)
 # ============================================================
 
 HTML_TEMPLATE = r"""
@@ -750,19 +771,19 @@ body{margin:0;padding:0;background:#111;font-family:'Segoe UI',sans-serif;user-s
     <button id="btn-edit" class="btn-edit" onclick="toggleEditLanes()">Ajustar / Criar Colunas Manualmente</button>
     <button id="btn-clear" class="btn-clear" onclick="clearLanes()">Apagar Todas as Linhas</button>
     <div id="calib-instrucao">
-        <strong>Zoom:</strong> roda do mouse · <strong>Mover:</strong> botão do meio OU Espaço+arrastar · <strong>Colunas:</strong> ative o modo azul
+        <strong>Zoom:</strong> roda do mouse · <strong>Mover:</strong> botao do meio OU Espaco+arrastar · <strong>Colunas:</strong> ative o modo azul
     </div>
 </div>
 
 <div id="toolbar">
     <div class="tb-group">
         <div class="ci"><span class="lbl">Roda:</span><span class="val">Zoom</span></div>
-        <div class="ci"><span class="lbl">Meio/Espaço:</span><span class="val">Mover</span></div>
+        <div class="ci"><span class="lbl">Meio/Espaco:</span><span class="val">Mover</span></div>
         <div class="ci"><span class="lbl">Esq.(vazio):</span><span class="val">Criar banda</span></div>
         <div class="ci"><span style="color:#0f0;font-weight:bold;">━</span><span class="lbl">Esq.(banda):</span><span class="val">Marcar</span></div>
         <div class="ci"><span class="lbl">Dir.:</span><span class="val">Excluir banda</span></div>
     </div>
-    <div style="color:#2ecc71;font-weight:bold;font-size:11px;">Laser — Fundo dos Poços</div>
+    <div style="color:#2ecc71;font-weight:bold;font-size:11px;">Laser — Fundo dos Pocos</div>
 </div>
 
 <div id="toast"></div>
@@ -810,12 +831,12 @@ function toggleEditLanes(){
     if(isEditingLanes){
         btn.className='btn-edit ativo';
         btn.textContent='Salvar Colunas e Voltar';
-        instrucao('<strong>MODO COLUNAS:</strong> Esq=criar/arrastar linha · Dir=apagar linha · Meio/Espaço=mover · Roda=zoom');
+        instrucao('<strong>MODO COLUNAS:</strong> Esq=criar/arrastar linha · Dir=apagar linha · Meio/Espaco=mover · Roda=zoom');
         toast('Modo colunas ativo','info');
     } else {
         btn.className='btn-edit';
         btn.textContent='Ajustar / Criar Colunas Manualmente';
-        instrucao('<strong>Zoom:</strong> roda · <strong>Mover:</strong> botão do meio OU Espaço+arrastar · <strong>Colunas:</strong> ative o modo azul');
+        instrucao('<strong>Zoom:</strong> roda · <strong>Mover:</strong> botao do meio OU Espaco+arrastar · <strong>Colunas:</strong> ative o modo azul');
         toast('Colunas salvas!','success');
         sendData();
     }
@@ -974,6 +995,19 @@ function draw(){
     });
 }
 
+function loadImgFromB64(b64){
+    try{
+        var binary = atob(b64);
+        var len = binary.length;
+        var bytes = new Uint8Array(len);
+        for(var i=0;i<len;i++) bytes[i] = binary.charCodeAt(i);
+        var blob = new Blob([bytes], {type:'image/jpeg'});
+        return URL.createObjectURL(blob);
+    }catch(err){
+        return "data:image/jpeg;base64,"+b64;
+    }
+}
+
 function onRender(ev){
     const payload=(ev&&ev.detail)?ev.detail:ev;
     const args=payload&&payload.args?payload.args:null;
@@ -994,19 +1028,38 @@ function onRender(ev){
         }
     }
 
-    const src="data:image/jpeg;base64,"+args.img_b64;
-    if(img.src!==src){
-        img.src=src;
-        img.onload=()=>{
-            originalW=img.width; originalH=img.height;
-            scale=args.largura_inicial/originalW;
-            draw(); if(S) S.setFrameHeight(700);
+    var newKey = (args.img_b64||"").substring(0,64) + "|" + (args.img_b64||"").length;
+    if(window._lastImgKey !== newKey){
+        window._lastImgKey = newKey;
+        if(window._lastBlobUrl){
+            try{ URL.revokeObjectURL(window._lastBlobUrl); }catch(e){}
+        }
+        var src = loadImgFromB64(args.img_b64||"");
+        window._lastBlobUrl = src.indexOf("blob:")===0 ? src : null;
+        
+        img.onload = function(){
+            originalW = img.width; originalH = img.height;
+            scale = (args.largura_inicial||2600) / originalW;
+            draw();
+            if(S) S.setFrameHeight(700);
         };
-    } else { draw(); }
+        img.onerror = function(){
+            toast("Falha ao carregar imagem do gel","error");
+            if(S) S.setFrameHeight(700);
+        };
+        img.src = src;
+    } else {
+        draw();
+        if(S) S.setFrameHeight(700);
+    }
     isReady=true;
 }
 
-if(S){ S.events.addEventListener("streamlit:render",onRender); S.setComponentReady(); }
+if(S){ 
+    S.events.addEventListener("streamlit:render",onRender); 
+    S.setComponentReady(); 
+    S.setFrameHeight(700); 
+}
 
 container.addEventListener('wheel',(e)=>{
     e.preventDefault();
@@ -1178,16 +1231,32 @@ canvas.addEventListener('auxclick',e=>{ if(e.button===1) e.preventDefault(); });
 </html>
 """
 
-COMP_VERSION = "v28_6_7_" + hashlib.md5(HTML_TEMPLATE.encode("utf-8")).hexdigest()[:10]
+COMP_VERSION = "v28_6_8_" + hashlib.md5(HTML_TEMPLATE.encode("utf-8")).hexdigest()[:10]
+
+def _component_dir():
+    """Garante que a pasta do componente web seja criada de forma segura na nuvem."""
+    candidates = [
+        os.path.join(tempfile.gettempdir(), "ssr_canvas_component_" + COMP_VERSION),
+        os.path.join(os.getcwd(), "ssr_canvas_component")
+    ]
+    last_err = None
+    for comp_dir in candidates:
+        try:
+            os.makedirs(comp_dir, exist_ok=True)
+            fp = os.path.join(comp_dir, "index.html")
+            with open(fp, "w", encoding="utf-8") as f:
+                f.write(HTML_TEMPLATE)
+            if os.path.isfile(fp):
+                return comp_dir
+        except Exception as e:
+            last_err = e
+            continue
+    raise RuntimeError(f"Nao foi possivel criar componente canvas: {last_err}")
 
 @st.cache_resource
 def get_interactive_canvas(version=COMP_VERSION):
-    comp_dir = os.path.join(tempfile.gettempdir(), f"ssr_canvas_{version}")
-    os.makedirs(comp_dir, exist_ok=True)
-    fp = os.path.join(comp_dir, "index.html")
-    with open(fp, "w", encoding="utf-8") as f:
-        f.write(HTML_TEMPLATE)
-    return components.declare_component(f"ssr_canvas_{version}", path=comp_dir)
+    comp_dir = _component_dir()
+    return components.declare_component("ssr_gel_canvas", path=comp_dir)
 
 
 # ============================================================
@@ -1237,20 +1306,22 @@ def _on_change_ordenar():
 # ============================================================
 #  INTERFACE DO APLICATIVO
 # ============================================================
-st.title("Sistema SSR — Leitor de Gel Duplo v28.6.7")
+st.title("Sistema SSR — Leitor de Gel Duplo v28.6.8")
 
 nome_cultura_input = st.text_input(
     "Nome da Cultura / Material (ex: Milho, Feijao, Cafe):",
     value=st.session_state.get("nome_cultura_salva", "Minha_Cultura"),
-    help="Este nome sera a pasta principal criada na sua Area de Trabalho."
+    help="Este nome sera a pasta principal criada na sua Area de Trabalho (uso local)."
 )
 st.session_state["nome_cultura_salva"] = nome_cultura_input
 
 atualizar_caminhos(nome_cultura_input)
 garantir_pastas_base()
-st.caption(
-    f"**Caminho exato no seu PC:** `{os.path.join(_get_desktop_path(), 'ssr_resultados', _nome_arquivo_seguro(nome_cultura_input))}`"
-)
+
+if not _is_cloud():
+    st.caption(
+        f"**Caminho exato no seu PC:** `{os.path.join(_get_desktop_path(), 'ssr_resultados', _nome_arquivo_seguro(nome_cultura_input))}`"
+    )
 
 aba1, aba2, aba3, aba4 = st.tabs(["1. Calibracao e Marcacao", "2. Dendrograma UPGMA", "3. Exportar / Importar Excel", "4. Ajuda"])
 
@@ -1417,8 +1488,8 @@ with aba1:
                 filtro_cor = st.selectbox(
                     "Filtro de Cor (Opcional):",
                     [
-                        "Padrão (Cor Original)",
-                        "Lilás/Roxo (Fundo Roxo / Bandas Brancas)",
+                        "Padrao (Cor Original)",
+                        "Lilas/Roxo (Fundo Roxo / Bandas Brancas)",
                         "Preto e Branco (Fundo Preto)",
                         "Preto e Branco (Invertido - Fundo Branco)",
                         "Amarelo (Fundo Amarelo / Bandas Pretas)"
@@ -1443,7 +1514,7 @@ with aba1:
             cor_fundo = (255, 255, 255)
         elif "Amarelo" in filtro_cor:
             cor_fundo = (0, 160, 255)
-        elif "Lilás" in filtro_cor:
+        elif "Lilas" in filtro_cor:
             cor_fundo = (150, 30, 90)
         else:
             cor_fundo = (0, 0, 0)
@@ -1489,22 +1560,35 @@ with aba1:
         else:
             edges2_init = np.linspace(0, img2_t.shape[1], cols2 + 1).round().astype(int).tolist()
 
-        interactive_canvas = get_interactive_canvas()
-        canvas_result = interactive_canvas(
-            img_b64=img_b64,
-            w1=int(w1_img),
-            w2=int(img2_t.shape[1]),
-            y_guia=int(st.session_state["pos_laser"]),
-            list1=lista_f1,
-            list2=lista_f2,
-            largura_inicial=int(largura_panoramica),
-            skip1=int(st.session_state["skip1"]),
-            skip2=int(st.session_state["skip2"]),
-            edges1=edges1_init,
-            edges2=edges2_init,
-            bandas_init=st.session_state.get(f"bandas_{canvas_key}", []),
-            key=canvas_key
-        )
+        bandas_default = st.session_state.get(f"bandas_{canvas_key}", [])
+        canvas_result = None
+
+        try:
+            interactive_canvas = get_interactive_canvas()
+            canvas_result = interactive_canvas(
+                img_b64=img_b64,
+                w1=int(w1_img),
+                w2=int(img2_t.shape[1]),
+                y_guia=int(st.session_state["pos_laser"]),
+                list1=lista_f1,
+                list2=lista_f2,
+                largura_inicial=int(largura_panoramica),
+                skip1=int(st.session_state["skip1"]),
+                skip2=int(st.session_state["skip2"]),
+                edges1=edges1_init,
+                edges2=edges2_init,
+                bandas_init=bandas_default,
+                default={"bandas": bandas_default, "calib_edges1": edges1_init, "calib_edges2": edges2_init},
+                key=canvas_key
+            )
+        except Exception as e:
+            st.error(f"Falha no canvas interativo: {e}")
+            st.warning("Mostrando gel em modo fallback (sem marcacao por clique na imagem). Use a matriz abaixo.")
+        
+        # Se componente não renderizar (em ambiente de nuvem rígido), exibe preview fallback
+        if canvas_result is None:
+            with st.expander("Preview estatico do gel (fallback visual)", expanded=False):
+                st.image(cv2.cvtColor(img_unida, cv2.COLOR_BGR2RGB), use_container_width=True)
 
         auto_upd = bool(st.session_state.get("auto_update", True))
         if canvas_result and isinstance(canvas_result, dict):
@@ -1578,8 +1662,7 @@ with aba1:
         col_m1, col_m2 = st.columns(2)
         with col_m1:
             st.markdown(
-                f"**Salvar Primer Atual:**\nGrava a **matriz Excel** e o **gel processado** "
-                f"dentro da pasta `{_nome_arquivo_seguro(nome_primer)}` na sua Area de Trabalho."
+                f"**Salvar Primer Atual:**\nGrava a **matriz Excel** e o **gel processado**. "
             )
             if st.button(f"Salvar matriz e imagem do primer: {nome_primer}",
                          type="primary", use_container_width=True):
@@ -1607,10 +1690,7 @@ with aba1:
 
                 ok_bkp, path_bkp = salvar_backup_global()
 
-                try:
-                    os.startfile(pasta_primer)
-                except Exception:
-                    pass
+                abrir_pasta(pasta_primer)
 
                 linhas = [f"Primer **{nome_primer}** processado!",
                           f"Pasta: `{pasta_primer}`", ""]
@@ -1640,10 +1720,7 @@ with aba1:
                     y_guia=int(st.session_state["pos_laser"])
                 )
                 if ok_gel:
-                    try:
-                        os.startfile(pasta_primer)
-                    except Exception:
-                        pass
+                    abrir_pasta(pasta_primer)
                     st.success(f"Gel gravado em:\n`{info_gel}`")
                 else:
                     st.error(f"Nao foi possivel salvar o gel: {info_gel}")
@@ -1892,10 +1969,7 @@ with aba3:
                         dict_export, nome_cult, dj, acessos
                     )
                     if ok:
-                        try:
-                            os.startfile(info)
-                        except Exception:
-                            pass
+                        abrir_pasta(info)
                         st.success(
                             f"Arquivos salvos com sucesso!\n\n"
                             f"Pasta: `{info}`\n\n"
@@ -1925,7 +1999,7 @@ with aba4:
     st.header("Guia de Uso")
     st.markdown(
         "### Estrutura de Pastas Criada Automaticamente\n\n"
-        "Ao salvar um primer, o sistema gera esta hierarquia na sua **Area de Trabalho**:"
+        "Ao salvar um primer localmente, o sistema gera esta hierarquia na sua **Area de Trabalho**:"
     )
 
     st.code(
@@ -1951,17 +2025,17 @@ with aba4:
         "| Acao | Como fazer |\n"
         "|------|------------|\n"
         "| **Zoom** | Roda do mouse |\n"
-        "| **Mover a Imagem** | Botão do meio ou Espaço + arrastar |\n"
-        "| **Criar Nova Coluna** | Ativar modo azul e clicar com Botão Esquerdo |\n"
+        "| **Mover a Imagem** | Botao do meio ou Espaco + arrastar |\n"
+        "| **Criar Nova Coluna** | Ativar modo azul e clicar com Botao Esquerdo |\n"
         "| **Mover Coluna** | Segurar e arrastar a linha |\n"
-        "| **Apagar Linha de Coluna** | Botão Direito sobre a linha |\n"
-        "| **Criar Banda** | Botão Esquerdo no gel (fora das bandas) |\n"
-        "| **Marcar Banda (0/1)** | Botão Esquerdo sobre o marcador verde |\n"
-        "| **Deletar Banda** | Botão Direito sobre a banda |\n\n"
+        "| **Apagar Linha de Coluna** | Botao Direito sobre a linha |\n"
+        "| **Criar Banda** | Botao Esquerdo no gel (fora das bandas) |\n"
+        "| **Marcar Banda (0/1)** | Botao Esquerdo sobre o marcador verde |\n"
+        "| **Deletar Banda** | Botao Direito sobre a banda |\n\n"
         "### Filtros de Cor Disponiveis\n"
-        "- **Padrão (Cor Original)** — igual à foto enviada\n"
-        "- **Lilás/Roxo** — fundo roxo com bandas brancas (estilo UV)\n"
-        "- **P&B Fundo Preto** — escala de cinza padrão\n"
+        "- **Padrao (Cor Original)** — igual à foto enviada\n"
+        "- **Lilas/Roxo** — fundo roxo com bandas brancas (estilo UV)\n"
+        "- **P&B Fundo Preto** — escala de cinza padrao\n"
         "- **P&B Invertido** — negativo, fundo branco\n"
         "- **Amarelo (Fundo Ouro / Bandas Pretas)** — estilo nitrato de prata\n\n"
         "### Arquivo TXT Transposto (Ent-<Cultura>.txt)\n"
@@ -1976,13 +2050,12 @@ with aba4:
         "- Ao adicionar um item -> e inserido no lugar correto (ordenado)\n"
         "- Ao remover um item -> mantem a ordem\n"
         "- Ao ativar/desativar o checkbox -> dropdown reordena instantaneamente\n\n"
-        "### Como salvar corretamente\n"
+        "### Como salvar corretamente na Nuvem\n"
         "1. Digite o **Nome da Cultura** no topo (ex: Milho, Feijao).\n"
         "2. Digite o **Nome do Primer** (ex: ISSR 19).\n"
         "3. Faca a marcacao no gel.\n"
-        "4. Clique em **Salvar matriz e imagem do primer**.\n"
-        "5. Na Aba 3, clique em **Salvar em 'Codificacao de bandas'** para gerar o Excel + TXT unificados.\n"
-        "6. A pasta sera aberta automaticamente no Windows Explorer!"
+        "4. Clique em **Salvar matriz e imagem do primer** (para fixar na memoria).\n"
+        "5. Va ate a **Aba 3**, selecione o primer e baixe o Excel ou o arquivo TXT nos botoes indicados.\n"
     )
     st.divider()
-    st.success("SSR Pro v28.6.7 — Codificacao de Bandas + TXT Transposto Ent-<Cultura>.txt!")
+    st.success("SSR Pro v28.6.8 — Otimizado para Nuvem e Codificacao de Bandas!")
