@@ -1,12 +1,12 @@
 # ============================================================
 #  APP SSR — v28.6.7 (Codificação de Bandas + TXT Transposto)
-#  ✅ LOGIN: ifesbiomol / biomol102030
-#  ✅ Estrutura: Desktop/ssr_resultados/Cultura/Primer/arquivos
-#  ✅ Nova pasta: Codificação de bandas (Excel + TXT Ent-<Cultura>.txt)
-#  ✅ EXCEL EM BLOCOS MULTIPRIMER: Arial 11, Centralizado
-#  ✅ MODO CRIAÇÃO LIVRE DE COLUNAS (clicar, arrastar, deletar)
-#  ✅ Grava JPG mesmo em caminhos com acento (OneDrive/Área de Trabalho)
-#  ✅ Filtros: Padrão, Lilás/Roxo, P&B, P&B Invertido, Amarelo Ouro
+#  LOGIN: ifesbiomol / biomol102030
+#  Estrutura: Desktop/ssr_resultados/Cultura/Primer/arquivos
+#  Nova pasta: Codificação de bandas (Excel + TXT Ent-<Cultura>.txt)
+#  EXCEL EM BLOCOS MULTIPRIMER: Arial 11, Centralizado
+#  MODO CRIAÇÃO LIVRE DE COLUNAS (clicar, arrastar, deletar)
+#  Grava JPG mesmo em caminhos com acento (OneDrive/Área de Trabalho)
+#  Filtros: Padrão, Lilás/Roxo, P&B, P&B Invertido, Amarelo Ouro
 # ============================================================
 
 import streamlit as st
@@ -30,15 +30,15 @@ import openpyxl
 from datetime import datetime
 
 # ============================================================
-#  🔑 CREDENCIAIS PADRÃO DE ACESSO
+#  CREDENCIAIS PADRÃO DE ACESSO
 # ============================================================
 USUARIO_PADRAO = "ifesbiomol"
 SENHA_PADRAO = "biomol102030"
 
-st.set_page_config(page_title="SSR Pro v28.6.7", page_icon="🧬", layout="wide")
+st.set_page_config(page_title="SSR Pro v28.6.7", page_icon=None, layout="wide")
 
 # ============================================================
-#  🎨 CSS DE AJUSTE DE LAYOUT E DROPDOWN
+#  CSS DE AJUSTE DE LAYOUT E DROPDOWN
 # ============================================================
 st.markdown("""
 <style>
@@ -72,7 +72,7 @@ st.markdown("""
 
 
 # ============================================================
-#  🔒 SISTEMA DE VERIFICAÇÃO DE USUÁRIO E SENHA
+#  SISTEMA DE VERIFICAÇÃO DE USUÁRIO E SENHA
 # ============================================================
 
 def verificar_autenticacao():
@@ -85,17 +85,17 @@ def verificar_autenticacao():
     st.markdown("<br><br>", unsafe_allow_html=True)
     c_left, c_center, c_right = st.columns([1, 2, 1])
     with c_center:
-        st.title("🔒 Acesso Restrito — SSR Pro")
+        st.title("Acesso Restrito — SSR Pro")
         st.info("Entre com suas credenciais de acesso para acessar o sistema.")
         usuario_digitado = st.text_input("Usuário:", key="input_usuario_acesso")
         senha_digitada = st.text_input("Senha:", type="password", key="input_senha_acesso")
-        if st.button("🔑 Entrar no Sistema", type="primary", use_container_width=True):
+        if st.button("Entrar no Sistema", type="primary", use_container_width=True):
             if usuario_digitado == USUARIO_PADRAO and senha_digitada == SENHA_PADRAO:
                 st.session_state["autenticado"] = True
-                st.success("✅ Acesso liberado!")
+                st.success("Acesso liberado!")
                 st.rerun()
             else:
-                st.error("❌ Usuário ou senha incorretos!")
+                st.error("Usuário ou senha incorretos!")
     return False
 
 if not verificar_autenticacao():
@@ -103,7 +103,7 @@ if not verificar_autenticacao():
 
 
 # ============================================================
-#  📁 SISTEMA DE CAMINHOS — Suporta OneDrive e caminhos com acento
+#  SISTEMA DE CAMINHOS — Suporta OneDrive e caminhos com acento
 # ============================================================
 BASE_DIR = ""
 CULTURA_DIR = ""
@@ -272,13 +272,13 @@ def salvar_backup_global():
 
 
 # ============================================================
-#  🆕 NOVA PASTA: CODIFICAÇÃO DE BANDAS + TXT TRANSPOSTO
+#  PASTA: CODIFICAÇÃO DE BANDAS + TXT TRANSPOSTO
 # ============================================================
 
 def garantir_pasta_codificacao():
     """Cria a pasta 'Codificação de bandas' dentro da pasta da cultura."""
     garantir_pastas_base()
-    pasta = os.path.join(CULTURA_DIR, "Codificação de bandas")
+    pasta = os.path.join(CULTURA_DIR, "Codificacao de bandas")
     os.makedirs(pasta, exist_ok=True)
     return os.path.abspath(pasta)
 
@@ -291,23 +291,19 @@ def gerar_txt_transposto(primers_dict):
     - Apenas 0 e 1
     - Separados por EXATAMENTE um espaço (nunca '00' colado)
     - Sem nomes, sem cabeçalho, sem linha em branco extra
-    - CRLF (\\r\\n) para Windows/GENES
+    - CRLF (\r\n) para Windows/GENES
     """
     dfs = list(primers_dict.values())
     if not dfs:
         return ""
 
-    # Une todos os primers (bandas empilhadas)
     df_combined = pd.concat(dfs, axis=0)
 
-    # Ordena indivíduos se a opção estiver ativa
     acessos = [str(c) for c in df_combined.columns.tolist()]
     if st.session_state.get("ordenar_ids_auto", True):
         acessos = ordenar_ids(acessos)
-    # Reindex garante as mesmas colunas em todos; falta vira 0
     df_combined = df_combined.reindex(columns=acessos).fillna(0)
 
-    # Converte TUDO para 0/1 inteiro de forma segura (evita True/False/NaN/"0"/1.0)
     def _to01(x):
         try:
             if x is True or x == 1 or x == 1.0 or str(x).strip() == "1":
@@ -317,11 +313,10 @@ def gerar_txt_transposto(primers_dict):
             return 0
 
     try:
-        df_bin = df_combined.map(_to01)          # pandas >= 2.1
+        df_bin = df_combined.map(_to01)
     except Exception:
-        df_bin = df_combined.applymap(_to01)     # pandas antigo
+        df_bin = df_combined.applymap(_to01)
 
-    # Transpõe: linhas = indivíduos, colunas = bandas
     mat = df_bin.T.to_numpy()
 
     linhas = []
@@ -329,16 +324,11 @@ def gerar_txt_transposto(primers_dict):
     for i in range(mat.shape[0]):
         tokens = []
         for j in range(mat.shape[1]):
-            # Garante um único caractere '0' ou '1' por célula
             tokens.append("1" if int(mat[i, j]) == 1 else "0")
 
-        # Junta com UM espaço — nunca string vazia no meio
         linha = " ".join(tokens)
-
-        # Cinto de segurança: colapsa espaços duplicados e remove bordas
         linha = " ".join(linha.split())
 
-        # Validação: nenhum token pode ser diferente de 0 ou 1
         partes = linha.split(" ")
         if n_bandas_ref is None:
             n_bandas_ref = len(partes)
@@ -352,7 +342,6 @@ def gerar_txt_transposto(primers_dict):
 
         linhas.append(linha)
 
-    # GENES no Windows prefere CRLF; sem linha em branco no final
     return "\r\n".join(linhas) + "\r\n"
 
 
@@ -366,17 +355,14 @@ def salvar_codificacao_bandas(primers_dict, nome_cultura, dist_jaccard=None, ace
         pasta = garantir_pasta_codificacao()
         nome_seguro = _nome_arquivo_seguro(nome_cultura)
 
-        # --- Excel ---
         nome_export = "Combinado" if len(primers_dict) > 1 else list(primers_dict.keys())[0]
         excel_data = exportar_excel_completo(primers_dict, nome_export, dist_jaccard, acessos)
         caminho_xlsx = os.path.join(pasta, f"SSR_{_nome_arquivo_seguro(str(nome_export))}.xlsx")
         with open(caminho_xlsx, "wb") as f:
             f.write(excel_data)
 
-        # --- TXT transposto ---
         txt_content = gerar_txt_transposto(primers_dict)
         caminho_txt = os.path.join(pasta, f"Ent-{nome_seguro}.txt")
-        # ASCII + binário evita BOM/UTF-8 e caracteres invisíveis que quebram o GENES
         with open(caminho_txt, "wb") as f:
             f.write(txt_content.encode("ascii", errors="strict"))
 
@@ -490,7 +476,6 @@ def aplicar_filtro_bw(img_bgr, modo_filtro, brilho, contraste):
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
         gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
         f = gray.astype(np.float32) / 255.0
-        # Fundo roxo escuro → bandas brancas (estilo UV)
         b = (150 + f * (255 - 150)).astype(np.uint8)
         g = (30  + f * (255 - 30)).astype(np.uint8)
         r = (90  + f * (255 - 90)).astype(np.uint8)
@@ -505,22 +490,14 @@ def aplicar_filtro_bw(img_bgr, modo_filtro, brilho, contraste):
         proc = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
     elif modo_filtro == "Amarelo (Fundo Amarelo / Bandas Pretas)":
-        # Igual ao gel de nitrato de prata: fundo amarelo-ouro vivo,
-        # bandas marrom-escuras/pretas.
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
         gray = cv2.normalize(gray, None, 0, 255, cv2.NORM_MINMAX)
 
-        # Nas fotos UV as bandas ficam claras sobre fundo escuro.
-        # Invertemos para: fundo claro (=1) e banda escura (=0)
         inv = cv2.bitwise_not(gray)
         f = inv.astype(np.float32) / 255.0
 
-        # Aplica leve curva gamma para engrossar as bandas escuras
         f = np.power(f, 1.2)
 
-        # PALETA BGR (idêntica ao gel de referência):
-        # fundo (f=1) -> B=0,  G=160, R=255  (Amarelo Ouro Vivo)
-        # banda (f=0) -> B=10, G=20,  R=40   (Marrom Escuro / Preto)
         b = (0   * f + 10 * (1.0 - f)).astype(np.uint8)
         g = (160 * f + 20 * (1.0 - f)).astype(np.uint8)
         r = (255 * f + 40 * (1.0 - f)).astype(np.uint8)
@@ -770,8 +747,8 @@ body{margin:0;padding:0;background:#111;font-family:'Segoe UI',sans-serif;user-s
 <body>
 
 <div id="calib-panel">
-    <button id="btn-edit" class="btn-edit" onclick="toggleEditLanes()">📐 Ajustar / Criar Colunas Manualmente</button>
-    <button id="btn-clear" class="btn-clear" onclick="clearLanes()">🗑️ Apagar Todas as Linhas</button>
+    <button id="btn-edit" class="btn-edit" onclick="toggleEditLanes()">Ajustar / Criar Colunas Manualmente</button>
+    <button id="btn-clear" class="btn-clear" onclick="clearLanes()">Apagar Todas as Linhas</button>
     <div id="calib-instrucao">
         <strong>Zoom:</strong> roda do mouse · <strong>Mover:</strong> botão do meio OU Espaço+arrastar · <strong>Colunas:</strong> ative o modo azul
     </div>
@@ -779,13 +756,13 @@ body{margin:0;padding:0;background:#111;font-family:'Segoe UI',sans-serif;user-s
 
 <div id="toolbar">
     <div class="tb-group">
-        <div class="ci"><span>🔄</span><span class="lbl">Roda:</span><span class="val">Zoom</span></div>
-        <div class="ci"><span>🖐️</span><span class="lbl">Meio/Espaço:</span><span class="val">Mover</span></div>
-        <div class="ci"><span>🔵</span><span class="lbl">Esq.(vazio):</span><span class="val">Criar banda</span></div>
+        <div class="ci"><span class="lbl">Roda:</span><span class="val">Zoom</span></div>
+        <div class="ci"><span class="lbl">Meio/Espaço:</span><span class="val">Mover</span></div>
+        <div class="ci"><span class="lbl">Esq.(vazio):</span><span class="val">Criar banda</span></div>
         <div class="ci"><span style="color:#0f0;font-weight:bold;">━</span><span class="lbl">Esq.(banda):</span><span class="val">Marcar</span></div>
-        <div class="ci"><span>🔴</span><span class="lbl">Dir.:</span><span class="val">Excluir banda</span></div>
+        <div class="ci"><span class="lbl">Dir.:</span><span class="val">Excluir banda</span></div>
     </div>
-    <div style="color:#2ecc71;font-weight:bold;font-size:11px;">🟩 Laser — Fundo dos Poços</div>
+    <div style="color:#2ecc71;font-weight:bold;font-size:11px;">Laser — Fundo dos Poços</div>
 </div>
 
 <div id="toast"></div>
@@ -832,13 +809,13 @@ function toggleEditLanes(){
     const btn=document.getElementById('btn-edit');
     if(isEditingLanes){
         btn.className='btn-edit ativo';
-        btn.textContent='✅ Salvar Colunas e Voltar';
+        btn.textContent='Salvar Colunas e Voltar';
         instrucao('<strong>MODO COLUNAS:</strong> Esq=criar/arrastar linha · Dir=apagar linha · Meio/Espaço=mover · Roda=zoom');
         toast('Modo colunas ativo','info');
     } else {
         btn.className='btn-edit';
-        btn.textContent='📐 Ajustar / Criar Colunas Manualmente';
-        instrucao('<strong>Zoom:</strong> roda · <strong>Mover:</strong> botão do meio OU Espaço+arrastar · <strong>Colunas:</strong> ative o modo azul';
+        btn.textContent='Ajustar / Criar Colunas Manualmente';
+        instrucao('<strong>Zoom:</strong> roda · <strong>Mover:</strong> botão do meio OU Espaço+arrastar · <strong>Colunas:</strong> ative o modo azul');
         toast('Colunas salvas!','success');
         sendData();
     }
@@ -1052,8 +1029,8 @@ document.addEventListener('keydown',(e)=>{
     }
     if(e.key==='Escape'){
         if(isEditingLanes){ toggleEditLanes(); return; }
-        if(bandas.length>0&&confirm('🗑️ Limpar todas as bandas?')){
-            bandas=[]; draw(); sendData(); toast('✓ Bandas removidas','info');
+        if(bandas.length>0&&confirm('Limpar todas as bandas?')){
+            bandas=[]; draw(); sendData(); toast('Bandas removidas','info');
         }
     }
 });
@@ -1157,7 +1134,7 @@ canvas.addEventListener('mousedown',(e)=>{
                 }
                 clickedB.marks[col]=clickedB.marks[col]===1?0:1;
                 const nome=col<list1.length?list1[col]:list2[col-list1.length];
-                toast((clickedB.marks[col]?'✓ Marcado: ':'✗ Desmarcado: ')+nome, clickedB.marks[col]?'success':'warning');
+                toast((clickedB.marks[col]?'Marcado: ':'Desmarcado: ')+nome, clickedB.marks[col]?'success':'warning');
                 draw(); sendData();
             }
         } else {
@@ -1165,7 +1142,7 @@ canvas.addEventListener('mousedown',(e)=>{
             bandas.sort((a,b)=>a.y-b.y);
             const li=bandas.findIndex(b=>b.y===mY);
             const letra=li<26?String.fromCharCode(97+li):`b${li}`;
-            toast(`✓ Linha "${letra}" criada!`,'info');
+            toast(`Linha "${letra}" criada!`,'info');
             draw(); sendData();
         }
     } else if(e.button===2){
@@ -1174,7 +1151,7 @@ canvas.addEventListener('mousedown',(e)=>{
         for(let i=1;i<bandas.length;i++){const d=Math.abs(bandas[i].y-mY);if(d<md){md=d;ci=i;}}
         if(md<25/scale){
             const le=ci<26?String.fromCharCode(97+ci):`b${ci}`;
-            bandas.splice(ci,1); toast(`✗ Linha "${le}" excluída!`,'warning');
+            bandas.splice(ci,1); toast(`Linha "${le}" excluida!`,'warning');
             draw(); sendData();
         }
     }
@@ -1240,7 +1217,7 @@ for k, v in defaults.items():
 
 
 # ============================================================
-#  ✅ CALLBACKS
+#  CALLBACKS
 # ============================================================
 
 def _on_change_f1():
@@ -1260,39 +1237,39 @@ def _on_change_ordenar():
 # ============================================================
 #  INTERFACE DO APLICATIVO
 # ============================================================
-st.title("🧬 Sistema SSR — Leitor de Gel Duplo v28.6.7")
+st.title("Sistema SSR — Leitor de Gel Duplo v28.6.7")
 
 nome_cultura_input = st.text_input(
-    "🌱 Nome da Cultura / Material (ex: Milho, Feijão, Café):",
+    "Nome da Cultura / Material (ex: Milho, Feijao, Cafe):",
     value=st.session_state.get("nome_cultura_salva", "Minha_Cultura"),
-    help="Este nome será a pasta principal criada na sua Área de Trabalho."
+    help="Este nome sera a pasta principal criada na sua Area de Trabalho."
 )
 st.session_state["nome_cultura_salva"] = nome_cultura_input
 
 atualizar_caminhos(nome_cultura_input)
 garantir_pastas_base()
 st.caption(
-    f"📂 **Caminho exato no seu PC:** `{os.path.join(_get_desktop_path(), 'ssr_resultados', _nome_arquivo_seguro(nome_cultura_input))}`"
+    f"**Caminho exato no seu PC:** `{os.path.join(_get_desktop_path(), 'ssr_resultados', _nome_arquivo_seguro(nome_cultura_input))}`"
 )
 
-aba1, aba2, aba3, aba4 = st.tabs(["📋 1. Calibração e Marcação", "📊 2. Dendrograma UPGMA", "📥 3. Exportar / Importar Excel", "❓ 4. Ajuda"])
+aba1, aba2, aba3, aba4 = st.tabs(["1. Calibracao e Marcacao", "2. Dendrograma UPGMA", "3. Exportar / Importar Excel", "4. Ajuda"])
 
 # ─────────────────────────────────────────────────────────────
 with aba1:
-    st.header("⚙️ Configuração das Amostras")
+    st.header("Configuracao das Amostras")
 
     opcoes_ids = [str(i) for i in range(1, 301)] + ["L", "C", "C1", "C2", "M"]
 
     c1, c2 = st.columns([2, 5])
     with c1:
         nome_primer = st.text_input("Nome do Primer:", value="ISSR 19",
-                                     help="Uma subpasta com este nome será criada dentro da pasta da cultura.")
+                                     help="Uma subpasta com este nome sera criada dentro da pasta da cultura.")
         st.session_state["auto_update"] = st.checkbox(
-            "⚡ Atualização automática",
+            "Atualizacao automatica",
             value=bool(st.session_state.get("auto_update", True)),
         )
         st.session_state["ordenar_ids_auto"] = st.checkbox(
-            "🔢 Ordenar IDs no gel e dropdown",
+            "Ordenar IDs no gel e dropdown",
             value=bool(st.session_state.get("ordenar_ids_auto", True)),
             on_change=_on_change_ordenar,
         )
@@ -1301,14 +1278,14 @@ with aba1:
         fc1, fc2 = st.columns(2)
         with fc1:
             st.multiselect(
-                "Indivíduos Foto 1 (Esquerda):",
+                "Individuos Foto 1 (Esquerda):",
                 options=opcoes_ids,
                 key="ms_f1",
                 on_change=_on_change_f1,
             )
         with fc2:
             st.multiselect(
-                "Indivíduos Foto 2 (Direita):",
+                "Individuos Foto 2 (Direita):",
                 options=opcoes_ids,
                 key="ms_f2",
                 on_change=_on_change_f2,
@@ -1330,10 +1307,10 @@ with aba1:
             st.warning("Foto 2: nenhum selecionado")
     with s3:
         lista_uni = list(dict.fromkeys(lista_f1 + lista_f2)) if (lista_f1 or lista_f2) else []
-        st.info(f"Total único de indivíduos: {len(lista_uni)}")
+        st.info(f"Total unico de individuos: {len(lista_uni)}")
 
     st.divider()
-    st.header("📸 Upload das Fotos")
+    st.header("Upload das Fotos")
     cu1, cu2 = st.columns(2)
     with cu1:
         foto1 = st.file_uploader("FOTO 1 (Esquerda)", type=["png", "jpg", "jpeg", "tif"])
@@ -1344,22 +1321,22 @@ with aba1:
         img1, er1 = carregar_imagem(foto1)
         img2, er2 = carregar_imagem(foto2)
         if img1 is None:
-            st.error(f"❌ Foto 1: {er1}")
+            st.error(f"Foto 1: {er1}")
             st.stop()
         if img2 is None:
-            st.error(f"❌ Foto 2: {er2}")
+            st.error(f"Foto 2: {er2}")
             st.stop()
         upload_id = f"{foto1.name}_{foto1.size}_{foto2.name}_{foto2.size}"
 
         st.markdown("---")
-        st.subheader("🛠️ Calibração Vertical")
+        st.subheader("Calibracao Vertical")
         
         img1_work = img1.copy()
         img2_work = img2.copy()
 
         colA, colB = st.columns([2, 3])
         with colA:
-            if st.button("🎯 ALINHAR AUTOMATICAMENTE", type="primary", use_container_width=True):
+            if st.button("ALINHAR AUTOMATICAMENTE", type="primary", use_container_width=True):
                 off, ylaser, y1d, y2d = auto_calibrar(
                     img1_work, img2_work,
                     rot1=st.session_state["rot_f1"],
@@ -1383,7 +1360,7 @@ with aba1:
         with colB:
             if st.session_state["auto_ok"]:
                 st.success(
-                    f"✅ F1 Y={st.session_state['y1_det']} | "
+                    f"F1 Y={st.session_state['y1_det']} | "
                     f"F2 Y={st.session_state['y2_det']} | "
                     f"Offset={st.session_state['offset_y2']}px"
                 )
@@ -1392,32 +1369,32 @@ with aba1:
         # Menus Expansíveis de Ajuste (Padronizados)
         # -------------------------------------------------------------
         
-        with st.expander("⚙️ Controles Manuais de Calibração"):
+        with st.expander("Controles Manuais de Calibracao"):
             cc1, cc2, cc3 = st.columns([2, 3, 3])
             with cc1:
-                st.markdown("🎯 **Ajuste Fino Vertical**")
+                st.markdown("**Ajuste Fino Vertical**")
                 b1, b2, b3, b4 = st.columns(4)
-                if b1.button("⬆️+10"):
+                if b1.button("+10"):
                     st.session_state["offset_y2"] -= 10; st.rerun()
-                if b2.button("⬆️+1"):
+                if b2.button("+1"):
                     st.session_state["offset_y2"] -= 1; st.rerun()
-                if b3.button("⬇️-1"):
+                if b3.button("-1"):
                     st.session_state["offset_y2"] += 1; st.rerun()
-                if b4.button("⬇️-10"):
+                if b4.button("-10"):
                     st.session_state["offset_y2"] += 10; st.rerun()
                 st.session_state["offset_y2"] = st.number_input(
                     "Deslocamento Y:", value=int(st.session_state["offset_y2"]), step=1)
             with cc2:
-                st.markdown("📏 **Posição do Laser**")
+                st.markdown("**Posicao do Laser**")
                 st.session_state["pos_laser"] = st.slider(
                     "Altura Linha Guia:", 5, 500, int(st.session_state["pos_laser"]), 1)
             with cc3:
-                st.markdown("🔄 **Rotação**")
+                st.markdown("**Rotacao**")
                 st.session_state["rot_f1"] = st.slider(
-                    "Rotação F1 (°):", -10.0, 10.0, float(st.session_state["rot_f1"]), 0.1)
+                    "Rotacao F1 (graus):", -10.0, 10.0, float(st.session_state["rot_f1"]), 0.1)
                 st.session_state["rot_f2"] = st.slider(
-                    "Rotação F2 (°):", -10.0, 10.0, float(st.session_state["rot_f2"]), 0.1)
-                if st.button("🔁 Recalibrar", use_container_width=True):
+                    "Rotacao F2 (graus):", -10.0, 10.0, float(st.session_state["rot_f2"]), 0.1)
+                if st.button("Recalibrar", use_container_width=True):
                     off, ylaser, y1d, y2d = auto_calibrar(
                         img1_work, img2_work,
                         rot1=st.session_state["rot_f1"],
@@ -1427,14 +1404,14 @@ with aba1:
                     st.session_state.update({"offset_y2": off, "pos_laser": ylaser, "auto_ok": True})
                     st.rerun()
 
-        with st.expander("🔍 Ajustes Adicionais"):
+        with st.expander("Ajustes Adicionais"):
             ce1, ce2 = st.columns(2)
             with ce1:
                 brilho = st.slider("Brilho:", 0.5, 3.0, 1.0, 0.1)
                 contraste = st.slider("Contraste:", 0.5, 3.0, 1.0, 0.1)
             with ce2:
                 st.session_state["escala_y2"] = st.slider(
-                    "Escala F2 (%):", 80.0, 120.0,
+                    "Escala F2 (percentual):", 80.0, 120.0,
                     float(st.session_state["escala_y2"] * 100), 0.5
                 ) / 100.0
                 filtro_cor = st.selectbox(
@@ -1450,7 +1427,7 @@ with aba1:
                     help="Escolha o visual do gel para facilitar a leitura."
                 )
 
-        with st.expander("🧭 Pular colunas iniciais (ladder/controle)"):
+        with st.expander("Pular colunas iniciais (ladder/controle)"):
             col_s1, col_s2 = st.columns(2)
             with col_s1:
                 st.session_state["skip1"] = st.number_input(
@@ -1463,13 +1440,13 @@ with aba1:
         # Aplicação dos Filtros e Transformações
         # -------------------------------------------------------------
         if "Invertido" in filtro_cor:
-            cor_fundo = (255, 255, 255)          # branco
+            cor_fundo = (255, 255, 255)
         elif "Amarelo" in filtro_cor:
-            cor_fundo = (0, 160, 255)            # BGR amarelo-ouro (igual ao filtro)
+            cor_fundo = (0, 160, 255)
         elif "Lilás" in filtro_cor:
-            cor_fundo = (150, 30, 90)            # BGR roxo
+            cor_fundo = (150, 30, 90)
         else:
-            cor_fundo = (0, 0, 0)                # preto
+            cor_fundo = (0, 0, 0)
         
         img1_p = aplicar_filtro_bw(img1_work, filtro_cor, brilho, contraste)
         img2_p = aplicar_filtro_bw(img2_work, filtro_cor, brilho, contraste)
@@ -1489,13 +1466,12 @@ with aba1:
         cv2.line(img2_t, (1, 0), (1, h1), (255, 150, 0), 3)
         img_unida = cv2.hconcat([img1_t, img2_t])
         
-        # ✅ cv2.imencode salva no padrão BGR corretamente. NÃO converter para RGB!
         _, buffer = cv2.imencode(".jpg", img_unida, [cv2.IMWRITE_JPEG_QUALITY, 96])
         img_b64 = base64.b64encode(buffer).decode()
 
 
         st.divider()
-        st.subheader("🔬 Visualizador Interativo")
+        st.subheader("Visualizador Interativo")
 
         largura_panoramica = st.slider("Tamanho Inicial (px):", 1000, 6000, 2600, 100)
 
@@ -1551,14 +1527,14 @@ with aba1:
         num_canvas_bands = len(bandas_salvas)
 
         st.divider()
-        st.subheader("✍️ Matriz de Leitura")
+        st.subheader("Matriz de Leitura")
         cm1, cm2 = st.columns([2, 4])
         with cm1:
             n_bandas = st.number_input(
                 "Total de bandas:", min_value=1, max_value=100, value=max(1, num_canvas_bands))
         n_real = max(n_bandas, num_canvas_bands)
         with cm2:
-            st.info(f"📊 **{n_real} bandas** × **{len(lista_uni)} indivíduos**")
+            st.info(f"**{n_real} bandas** x **{len(lista_uni)} individuos**")
 
         letras_tabela = [chr(97 + i) if i < 26 else f"b{i}" for i in range(n_real)]
         key_mat = f"matriz_dados_{nome_primer}_{upload_id}"
@@ -1593,19 +1569,19 @@ with aba1:
         taxa = (tm / tc * 100) if tc > 0 else 0
         cs1, cs2, cs3 = st.columns(3)
         cs1.metric("Total Marcado", f"{int(tm)}/{tc}")
-        cs2.metric("Taxa de Presença", f"{taxa:.1f}%")
-        cs3.metric("Bandas × Indivíduos", f"{n_real} × {len(lista_uni)}")
+        cs2.metric("Taxa de Presenca", f"{taxa:.1f}%")
+        cs3.metric("Bandas x Individuos", f"{n_real} x {len(lista_uni)}")
 
         st.divider()
-        st.subheader("💾 Gerenciador de Primers (Multilocus)")
+        st.subheader("Gerenciador de Primers (Multilocus)")
 
         col_m1, col_m2 = st.columns(2)
         with col_m1:
             st.markdown(
                 f"**Salvar Primer Atual:**\nGrava a **matriz Excel** e o **gel processado** "
-                f"dentro da pasta `{_nome_arquivo_seguro(nome_primer)}` na sua Área de Trabalho."
+                f"dentro da pasta `{_nome_arquivo_seguro(nome_primer)}` na sua Area de Trabalho."
             )
-            if st.button(f"💾 Salvar matriz e imagem do primer: {nome_primer}",
+            if st.button(f"Salvar matriz e imagem do primer: {nome_primer}",
                          type="primary", use_container_width=True):
                 atualizar_caminhos(st.session_state.get("nome_cultura_salva", nome_cultura_input))
                 pasta_primer = garantir_pasta_primer(nome_primer)
@@ -1636,11 +1612,11 @@ with aba1:
                 except Exception:
                     pass
 
-                linhas = [f"✅ Primer **{nome_primer}** processado!",
-                          f"📁 Pasta: `{pasta_primer}`", ""]
-                linhas.append(f"📊 Matriz: `{path_mat}`" if ok_mat else f"❌ Matriz: {path_mat}")
-                linhas.append(f"🖼️ Gel: `{info_gel}`" if ok_gel else f"❌ Gel: {info_gel}")
-                linhas.append(f"💾 Backup: `{path_bkp}`" if ok_bkp else f"❌ Backup: {path_bkp}")
+                linhas = [f"Primer **{nome_primer}** processado!",
+                          f"Pasta: `{pasta_primer}`", ""]
+                linhas.append(f"Matriz: `{path_mat}`" if ok_mat else f"Matriz (Erro): {path_mat}")
+                linhas.append(f"Gel: `{info_gel}`" if ok_gel else f"Gel (Erro): {info_gel}")
+                linhas.append(f"Backup: `{path_bkp}`" if ok_bkp else f"Backup (Erro): {path_bkp}")
 
                 if ok_mat and ok_gel:
                     st.success("\n\n".join(linhas))
@@ -1649,7 +1625,7 @@ with aba1:
                 else:
                     st.error("\n\n".join(linhas))
 
-            if st.button("🖼️ Salvar apenas a foto do GEL com marcações", use_container_width=True):
+            if st.button("Salvar apenas a foto do GEL com marcacoes", use_container_width=True):
                 pasta_primer = garantir_pasta_primer(nome_primer)
                 e1_now = st.session_state.get(f"edges1_{canvas_key}", edges1_init)
                 e2_now = st.session_state.get(f"edges2_{canvas_key}", edges2_init)
@@ -1668,13 +1644,13 @@ with aba1:
                         os.startfile(pasta_primer)
                     except Exception:
                         pass
-                    st.success(f"🖼️ Gel gravado em:\n`{info_gel}`")
+                    st.success(f"Gel gravado em:\n`{info_gel}`")
                 else:
-                    st.error(f"❌ Não foi possível salvar o gel: {info_gel}")
+                    st.error(f"Nao foi possivel salvar o gel: {info_gel}")
 
         with col_m2:
             st.markdown(
-                "**📂 Continuar a partir de Planilha Pronta:**\n"
+                "**Continuar a partir de Planilha Pronta:**\n"
                 "Importe um Excel gerado anteriormente pelo App:"
             )
             arq_excel_a1 = st.file_uploader(
@@ -1687,26 +1663,26 @@ with aba1:
                     try:
                         dict_primers, erro = importar_excel_completo(arq_excel_a1.read())
                         if erro:
-                            st.error(f"❌ Falha ao ler arquivo: {erro}")
+                            st.error(f"Falha ao ler arquivo: {erro}")
                         else:
                             st.session_state["todas_matrizes"].update(dict_primers)
                             salvar_backup_global()
                             st.session_state["last_import_a1"] = file_id
                             nomes_lidos = ", ".join(list(dict_primers.keys()))
                             st.session_state["msg_import_local_a1"] = (
-                                f"✅ {len(dict_primers)} primers importados:\n\n**{nomes_lidos}**"
+                                f"{len(dict_primers)} primers importados:\n\n**{nomes_lidos}**"
                             )
-                            st.toast(f"{len(dict_primers)} primers carregados!", icon="✅")
+                            st.toast(f"{len(dict_primers)} primers carregados!")
                     except Exception as ex:
-                        st.error(f"❌ Falha crítica ao importar: {str(ex)}")
+                        st.error(f"Falha critica ao importar: {str(ex)}")
                 if st.session_state.get("msg_import_local_a1"):
                     st.success(st.session_state["msg_import_local_a1"])
 
         st.divider()
         salvos = list(st.session_state["todas_matrizes"].keys())
         if salvos:
-            st.caption(f"📦 **{len(salvos)} Primers em memória:** {', '.join(salvos)}")
-            if st.button("🗑️ Limpar toda a memória de primers"):
+            st.caption(f"**{len(salvos)} Primers em memoria:** {', '.join(salvos)}")
+            if st.button("Limpar toda a memoria de primers"):
                 st.session_state["todas_matrizes"] = {}
                 if os.path.exists(BACKUP_FILE):
                     try:
@@ -1715,24 +1691,24 @@ with aba1:
                         pass
                 st.rerun()
         else:
-            st.caption("Nenhum primer na memória temporária.")
+            st.caption("Nenhum primer na memoria temporaria.")
 
     elif not (lista_f1 and lista_f2):
-        st.info("💡 Selecione os indivíduos de cada foto para poder enviar as imagens.")
+        st.info("Selecione os individuos de cada foto para poder enviar as imagens.")
     else:
-        st.info("💡 Faça upload das duas fotos para iniciar.")
+        st.info("Faca upload das duas fotos para iniciar.")
 
 
 # ─────────────────────────────────────────────────────────────
 with aba2:
-    st.header("📊 Análise de Diversidade Genética (UPGMA Combinado)")
+    st.header("Analise de Diversidade Genetica (UPGMA Combinado)")
 
     salvos = list(st.session_state.get("todas_matrizes", {}).keys())
 
     if len(salvos) == 0:
-        st.info("💡 Salve ou Importe um primer na **Aba 1** para gerar o Dendrograma.")
+        st.info("Salve ou Importe um primer na **Aba 1** para gerar o Dendrograma.")
     else:
-        st.markdown("### 🗂️ Quais primers você quer analisar juntos?")
+        st.markdown("### Quais primers voce quer analisar juntos?")
         primers_selecionados = st.multiselect("Selecione os primers:", salvos, default=salvos)
 
         if primers_selecionados:
@@ -1744,14 +1720,14 @@ with aba2:
             mat_bin = df_combined.values.T.astype(int)
 
             st.info(
-                f"🧬 Analisando **{len(bandas_l)} bandas** de **{len(primers_selecionados)} primer(s)** "
-                f"para **{len(acessos)} indivíduos**."
+                f"Analisando **{len(bandas_l)} bandas** de **{len(primers_selecionados)} primer(s)** "
+                f"para **{len(acessos)} individuos**."
             )
 
             if mat_bin.shape[0] >= 3 and np.sum(mat_bin) > 0:
                 titulo_upgma = (
                     f"UPGMA — {len(primers_selecionados)} Primers Combinados "
-                    f"({len(acessos)} Indivíduos)"
+                    f"({len(acessos)} Individuos)"
                 )
                 dj = calcular_jaccard(mat_bin)
                 Z = fazer_upgma(dj)
@@ -1767,7 +1743,7 @@ with aba2:
                     fd = plotar_dendrograma(Z, acessos, titulo_upgma)
                     fd.savefig(bf, format="png", dpi=300, bbox_inches="tight")
                     plt.close(fd)
-                    st.download_button("📷 PNG 300dpi", bf.getvalue(),
+                    st.download_button("PNG 300dpi", bf.getvalue(),
                                        f"dendrograma_{nome_arq}.png", "image/png",
                                        use_container_width=True)
                 with cd2:
@@ -1775,22 +1751,22 @@ with aba2:
                     fp2 = plotar_dendrograma(Z, acessos, titulo_upgma)
                     fp2.savefig(bp, format="pdf", bbox_inches="tight")
                     plt.close(fp2)
-                    st.download_button("📄 PDF", bp.getvalue(),
+                    st.download_button("PDF", bp.getvalue(),
                                        f"dendrograma_{nome_arq}.pdf", "application/pdf",
                                        use_container_width=True)
 
                 st.divider()
                 ce1, ce2 = st.columns(2)
                 with ce1:
-                    st.subheader("🎯 Genitores Contrastantes")
+                    st.subheader("Genitores Contrastantes")
                     aux = dj.copy()
                     np.fill_diagonal(aux, -1)
                     ix = np.unravel_index(np.argmax(aux), aux.shape)
                     st.success(
-                        f"🧬 **{acessos[ix[0]]}** × **{acessos[ix[1]]}**\n\n"
-                        f"📊 Dissimilaridade: **{aux[ix]:.3f}**"
+                        f"**{acessos[ix[0]]}** x **{acessos[ix[1]]}**\n\n"
+                        f"Dissimilaridade: **{aux[ix]:.3f}**"
                     )
-                    with st.expander("🔝 Top 5"):
+                    with st.expander("Top 5"):
                         pares = sorted(
                             [(acessos[i], acessos[j], dj[i, j])
                              for i in range(len(acessos))
@@ -1798,9 +1774,9 @@ with aba2:
                             key=lambda x: x[2], reverse=True
                         )
                         for r, (a1, a2, d) in enumerate(pares[:5], 1):
-                            st.write(f"**{r}.** {a1} × {a2} → {d:.3f}")
+                            st.write(f"**{r}.** {a1} x {a2} -> {d:.3f}")
                 with ce2:
-                    st.subheader("📈 PIC por Banda")
+                    st.subheader("PIC por Banda")
                     ni = mat_bin.shape[0]
                     rows = []
                     for j in range(mat_bin.shape[1]):
@@ -1810,33 +1786,33 @@ with aba2:
                             "Banda": bandas_l[j],
                             "Freq(1)": round(p, 3),
                             "PIC": round(pv, 3),
-                            "Info": "✓" if pv > 0.25 else "✗"
+                            "Info": "OK" if pv > 0.25 else "F"
                         })
                     df_pic = pd.DataFrame(rows)
                     st.dataframe(
                         df_pic.style.background_gradient(subset=['PIC'], cmap='RdYlGn'),
                         use_container_width=True, hide_index=True
                     )
-                    st.metric("PIC Médio Geral", f"{df_pic['PIC'].mean():.3f}")
+                    st.metric("PIC Medio Geral", f"{df_pic['PIC'].mean():.3f}")
 
-                with st.expander("📐 Matriz de Jaccard (Combinada)"):
+                with st.expander("Matriz de Jaccard (Combinada)"):
                     df_j = pd.DataFrame(dj, index=acessos, columns=acessos)
                     st.dataframe(
                         df_j.style.background_gradient(cmap="Blues").format("{:.3f}"),
                         use_container_width=True
                     )
             else:
-                st.warning("⚠️ Marque pelo menos 3 indivíduos para gerar a árvore.")
+                st.warning("Marque pelo menos 3 individuos para gerar a arvore.")
         else:
-            st.warning("Selecione pelo menos um primer para análise.")
+            st.warning("Selecione pelo menos um primer para analise.")
 
 
 # ─────────────────────────────────────────────────────────────
 with aba3:
-    st.header("📥 Exportar / Importar Matrizes SSR")
+    st.header("Exportar / Importar Matrizes SSR")
 
-    with st.expander("📂 IMPORTAR DE PLANILHA SSR EXISTENTE", expanded=True):
-        st.markdown("Faça o upload de uma planilha gerada por esta ferramenta para restaurar e continuar:")
+    with st.expander("IMPORTAR DE PLANILHA SSR EXISTENTE", expanded=True):
+        st.markdown("Faca o upload de uma planilha gerada por esta ferramenta para restaurar e continuar:")
         arq_excel_a3 = st.file_uploader(
             "Fazer upload do arquivo SSR_Combinado.xlsx:",
             type=["xlsx"], key="importar_excel_a3"
@@ -1847,27 +1823,27 @@ with aba3:
                 try:
                     dict_primers, erro = importar_excel_completo(arq_excel_a3.read())
                     if erro:
-                        st.error(f"❌ Não foi possível carregar: {erro}")
+                        st.error(f"Nao foi possivel carregar: {erro}")
                     else:
                         st.session_state["todas_matrizes"].update(dict_primers)
                         salvar_backup_global()
                         st.session_state["last_import_a3"] = file_id
                         nomes_lidos = ", ".join(list(dict_primers.keys()))
                         st.session_state["msg_import_local_a3"] = (
-                            f"✅ Planilha restaurada! {len(dict_primers)} primers:\n\n📌 **{nomes_lidos}**"
+                            f"Planilha restaurada! {len(dict_primers)} primers:\n\n**{nomes_lidos}**"
                         )
-                        st.toast(f"{len(dict_primers)} primers carregados!", icon="✅")
+                        st.toast(f"{len(dict_primers)} primers carregados!")
                 except Exception as ex:
-                    st.error(f"❌ Erro inesperado: {str(ex)}")
+                    st.error(f"Erro inesperado: {str(ex)}")
             if st.session_state.get("msg_import_local_a3"):
                 st.success(st.session_state["msg_import_local_a3"])
 
     st.divider()
-    st.subheader("📤 Exportar Planilha Excel Atual")
+    st.subheader("Exportar Planilha Excel Atual")
     salvos = list(st.session_state.get("todas_matrizes", {}).keys())
 
     if len(salvos) == 0:
-        st.info("💡 Salve pelo menos um primer ou importe uma planilha para exportar.")
+        st.info("Salve pelo menos um primer ou importe uma planilha para exportar.")
     else:
         st.markdown("### Selecione os primers para juntar no Excel:")
         primers_export = st.multiselect(
@@ -1883,7 +1859,7 @@ with aba3:
             if mat_bin.shape[0] >= 3 and np.sum(mat_bin) > 0:
                 dj = calcular_jaccard(mat_bin)
             nome_export = "Combinado" if len(primers_export) > 1 else primers_export[0]
-            st.write("✅ Matriz Binária em blocos · ✅ Jaccard · ✅ Arial 11 Centrado · ✅ TXT Transposto")
+            st.write("Matriz Binaria em blocos · Jaccard · Arial 11 Centrado · TXT Transposto")
             st.divider()
 
             buf = exportar_excel_completo(dict_export, nome_export, dj, acessos)
@@ -1894,7 +1870,7 @@ with aba3:
             cb1, cb2, cb3 = st.columns(3)
             with cb1:
                 st.download_button(
-                    "📥 Baixar Excel",
+                    "Baixar Excel",
                     buf,
                     f"SSR_{nome_export}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1902,15 +1878,15 @@ with aba3:
                 )
             with cb2:
                 st.download_button(
-                    f"📄 Baixar TXT (Ent-{nome_cult_seguro}.txt)",
+                    f"Baixar TXT (Ent-{nome_cult_seguro}.txt)",
                     txt_buf.encode("ascii", errors="strict"),
                     f"Ent-{nome_cult_seguro}.txt",
                     "text/plain",
                     use_container_width=True,
-                    help="Matriz transposta: só 0 e 1, um espaço entre valores, formato GENES.",
+                    help="Matriz transposta: so 0 e 1, um espaco entre valores, formato GENES.",
                 )
             with cb3:
-                if st.button("📁 Salvar em 'Codificação de bandas'",
+                if st.button("Salvar em 'Codificacao de bandas'",
                              type="primary", use_container_width=True):
                     ok, info, path_xlsx, path_txt = salvar_codificacao_bandas(
                         dict_export, nome_cult, dj, acessos
@@ -1921,35 +1897,35 @@ with aba3:
                         except Exception:
                             pass
                         st.success(
-                            f"✅ Arquivos salvos com sucesso!\n\n"
-                            f"📁 Pasta: `{info}`\n\n"
-                            f"📊 Excel: `{path_xlsx}`\n\n"
-                            f"📄 TXT: `{path_txt}`"
+                            f"Arquivos salvos com sucesso!\n\n"
+                            f"Pasta: `{info}`\n\n"
+                            f"Excel: `{path_xlsx}`\n\n"
+                            f"TXT: `{path_txt}`"
                         )
                     else:
-                        st.error(f"❌ Falha ao salvar: {info}")
+                        st.error(f"Falha ao salvar: {info}")
 
             st.success(
-                f"✅ Pronto: **{len(df_combined)} bandas** × **{len(acessos)} indivíduos** "
+                f"Pronto: **{len(df_combined)} bandas** x **{len(acessos)} individuos** "
                 f"· TXT no formato `Ent-{nome_cult_seguro}.txt`"
             )
-            with st.expander("👁️ Prévia do TXT transposto (primeiras linhas)"):
+            with st.expander("Previa do TXT transposto (primeiras linhas)"):
                 preview_lines = [ln for ln in txt_buf.replace("\r\n", "\n").strip().split("\n") if ln != ""]
                 n_show = min(8, len(preview_lines))
                 st.code("\n".join(preview_lines[:n_show]), language="text")
                 st.caption(
-                    f"Total: **{len(preview_lines)} linhas** (indivíduos) × "
+                    f"Total: **{len(preview_lines)} linhas** (individuos) x "
                     f"**{len(preview_lines[0].split()) if preview_lines else 0} colunas** (bandas). "
-                    f"Apenas 0 e 1, separados por um espaço (formato GENES)."
+                    f"Apenas 0 e 1, separados por um espaco (formato GENES)."
                 )
 
 
 # ─────────────────────────────────────────────────────────────
 with aba4:
-    st.header("❓ Guia de Uso")
+    st.header("Guia de Uso")
     st.markdown(
-        "### 📁 Estrutura de Pastas Criada Automaticamente\n\n"
-        "Ao salvar um primer, o sistema gera esta hierarquia na sua **Área de Trabalho**:"
+        "### Estrutura de Pastas Criada Automaticamente\n\n"
+        "Ao salvar um primer, o sistema gera esta hierarquia na sua **Area de Trabalho**:"
     )
 
     st.code(
@@ -1957,9 +1933,9 @@ with aba4:
         "└── ssr_resultados/                       ← Pasta principal (fixa)\n"
         "    └── Nome_da_Cultura/                  ← Nome digitado no topo do App\n"
         "        ├── backup_<Cultura>.pkl          ← Backup global de toda a cultura\n"
-        "        ├── Codificação de bandas/       ← 🆕 Pasta unificada de exportação\n"
+        "        ├── Codificacao de bandas/        ← Pasta unificada de exportacao\n"
         "        │   ├── SSR_Combinado.xlsx        ← Excel com todos os primers\n"
-        "        │   └── Ent-<Cultura>.txt         ← TXT transposto (só 0 e 1)\n"
+        "        │   └── Ent-<Cultura>.txt         ← TXT transposto (so 0 e 1)\n"
         "        ├── ISSR_19/                      ← Pasta do primer ISSR 19\n"
         "        │   ├── Matriz_ISSR_19.xlsx\n"
         "        │   └── gel_ISSR_19_<data>.jpg\n"
@@ -1971,42 +1947,42 @@ with aba4:
     )
 
     st.markdown(
-        "### 📝 Controles Rápidos do Visualizador\n\n"
-        "| Ação | Como fazer |\n"
+        "### Controles Rapidos do Visualizador\n\n"
+        "| Acao | Como fazer |\n"
         "|------|------------|\n"
         "| **Zoom** | Roda do mouse |\n"
-        "| **Mover a Imagem** | Botão do meio **ou** Espaço + arrastar |\n"
+        "| **Mover a Imagem** | Botão do meio ou Espaço + arrastar |\n"
         "| **Criar Nova Coluna** | Ativar modo azul e clicar com Botão Esquerdo |\n"
         "| **Mover Coluna** | Segurar e arrastar a linha |\n"
         "| **Apagar Linha de Coluna** | Botão Direito sobre a linha |\n"
         "| **Criar Banda** | Botão Esquerdo no gel (fora das bandas) |\n"
         "| **Marcar Banda (0/1)** | Botão Esquerdo sobre o marcador verde |\n"
         "| **Deletar Banda** | Botão Direito sobre a banda |\n\n"
-        "### 🎨 Filtros de Cor Disponíveis\n"
+        "### Filtros de Cor Disponiveis\n"
         "- **Padrão (Cor Original)** — igual à foto enviada\n"
         "- **Lilás/Roxo** — fundo roxo com bandas brancas (estilo UV)\n"
         "- **P&B Fundo Preto** — escala de cinza padrão\n"
         "- **P&B Invertido** — negativo, fundo branco\n"
         "- **Amarelo (Fundo Ouro / Bandas Pretas)** — estilo nitrato de prata\n\n"
-        "### 📄 Arquivo TXT Transposto (Ent-<Cultura>.txt)\n"
-        "- Gerado **automaticamente** na Aba 3\n"
-        "- Contém **APENAS** valores `0` e `1` separados por **um** espaço\n"
-        "- **Sem** nomes de primer, banda ou indivíduo\n"
-        "- **Cada linha** representa 1 indivíduo\n"
-        "- **Cada coluna** representa 1 banda\n"
-        "- Formato ASCII + CRLF, compatível com GENES\n"
-        "- Ideal para importação em softwares de análise (GENES, R, PAST, etc.)\n\n"
-        "### 💡 Ordenação de IDs\n"
-        "- ✅ Ao **adicionar** um item → é inserido no lugar correto (ordenado)\n"
-        "- ✅ Ao **remover** um item → mantém a ordem\n"
-        "- ✅ Ao **ativar/desativar** o checkbox → dropdown reordena instantaneamente\n\n"
-        "### 💾 Como salvar corretamente\n"
-        "1. Digite o **Nome da Cultura** no topo (ex: Milho, Feijão).\n"
+        "### Arquivo TXT Transposto (Ent-<Cultura>.txt)\n"
+        "- Gerado automaticamente na Aba 3\n"
+        "- Contem apenas valores `0` e `1` separados por um espaco\n"
+        "- Sem nomes de primer, banda ou individuo\n"
+        "- Cada linha representa 1 individuo\n"
+        "- Cada coluna representa 1 banda\n"
+        "- Formato ASCII + CRLF, compativel com GENES\n"
+        "- Ideal para importacao em softwares de analise (GENES, R, PAST, etc.)\n\n"
+        "### Ordenacao de IDs\n"
+        "- Ao adicionar um item -> e inserido no lugar correto (ordenado)\n"
+        "- Ao remover um item -> mantem a ordem\n"
+        "- Ao ativar/desativar o checkbox -> dropdown reordena instantaneamente\n\n"
+        "### Como salvar corretamente\n"
+        "1. Digite o **Nome da Cultura** no topo (ex: Milho, Feijao).\n"
         "2. Digite o **Nome do Primer** (ex: ISSR 19).\n"
-        "3. Faça a marcação no gel.\n"
+        "3. Faca a marcacao no gel.\n"
         "4. Clique em **Salvar matriz e imagem do primer**.\n"
-        "5. Na Aba 3, clique em **Salvar em 'Codificação de bandas'** para gerar o Excel + TXT unificados.\n"
-        "6. A pasta será aberta automaticamente no Windows Explorer!"
+        "5. Na Aba 3, clique em **Salvar em 'Codificacao de bandas'** para gerar o Excel + TXT unificados.\n"
+        "6. A pasta sera aberta automaticamente no Windows Explorer!"
     )
     st.divider()
-    st.success("✅ SSR Pro v28.6.7 — Codificação de Bandas + TXT Transposto Ent-<Cultura>.txt!")
+    st.success("SSR Pro v28.6.7 — Codificacao de Bandas + TXT Transposto Ent-<Cultura>.txt!")
