@@ -1,5 +1,5 @@
 # ============================================================
-#  APP SSR — v28.6.9 (Cloud-Ready / Controles Padronizados +/-)
+#  APP ISSR — v28.7.2 (Cloud-Ready / Login Clean Branco)
 #  LOGIN: ifesbiomol / biomol102030
 #  Estrutura: Desktop/ssr_resultados/Cultura/Primer/arquivos
 #  Nova pasta: Codificacao de bandas (Excel + TXT Ent-<Cultura>.txt)
@@ -35,13 +35,75 @@ from datetime import datetime
 USUARIO_PADRAO = "ifesbiomol"
 SENHA_PADRAO = "biomol102030"
 
-st.set_page_config(page_title="SSR Pro v28.6.9", page_icon=None, layout="wide")
+st.set_page_config(page_title="ISSR Pro v28.7.2", page_icon=None, layout="wide")
 
 # ============================================================
-#  CSS DE AJUSTE DE LAYOUT E DROPDOWN
+#  CSS DE AJUSTE DE LAYOUT, DROPDOWN E COR AZUL GLOBAL
 # ============================================================
 st.markdown("""
 <style>
+    /* ========================================================== */
+    /* FORÇAR A COR AZUL (#007bff) NO STREAMLIT INTEIRO         */
+    /* ========================================================== */
+    
+    /* 1. BOTÕES PRIMÁRIOS (ex: "Salvar em Codificacao de bandas") */
+    button[kind="primary"] {
+        background-color: #007bff !important;
+        border-color: #007bff !important;
+        color: #ffffff !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #0056b3 !important;
+        border-color: #0056b3 !important;
+        color: #ffffff !important;
+    }
+
+    /* 2. TAGS DO MULTISELECT (As caixinhas de seleção vermelhas) */
+    span[data-baseweb="tag"] {
+        background-color: #007bff !important;
+        color: #ffffff !important;
+    }
+    span[data-baseweb="tag"] span {
+        color: #ffffff !important;
+    }
+    span[data-baseweb="tag"] svg {
+        fill: #ffffff !important;
+    }
+    /* Efeito hover no 'X' para fechar a tag */
+    span[data-baseweb="tag"] span[role="button"]:hover {
+        background-color: #0056b3 !important;
+    }
+
+    /* 3. ABAS SUPERIORES (Tabs - Linha e Texto) */
+    div[data-baseweb="tab-highlight"] {
+        background-color: #007bff !important;
+    }
+    button[role="tab"][aria-selected="true"] {
+        color: #007bff !important;
+    }
+    button[role="tab"][aria-selected="true"] div,
+    button[role="tab"][aria-selected="true"] span,
+    button[role="tab"][aria-selected="true"] p {
+        color: #007bff !important;
+    }
+
+    /* 4. CHECKBOXES (Quadradinhos de marcar) */
+    div[data-testid="stCheckbox"] label div[data-checked="true"] {
+        background-color: #007bff !important;
+        border-color: #007bff !important;
+    }
+    
+    /* 5. SLIDERS (O controle de zoom px) */
+    div[data-testid="stSlider"] div[role="slider"] {
+        background-color: #007bff !important;
+    }
+    div[data-testid="stSlider"] div[data-baseweb="slider"] > div > div {
+        background-color: #007bff !important;
+    }
+
+    /* ========================================================== */
+    /* AJUSTES DE LAYOUT E DROPDOWNS ORIGINAIS DO PROJETO       */
+    /* ========================================================== */
     .block-container { padding-top:1rem; padding-bottom:1rem; max-width:100% !important; }
     iframe { border:none !important; }
     div[data-testid="column"] button { width:100%; margin-bottom:4px; }
@@ -72,7 +134,46 @@ st.markdown("""
 
 
 # ============================================================
-#  SISTEMA DE VERIFICACAO DE USUARIO E SENHA
+#  CARREGADOR DE LOGO VIA BASE64 (Garantido em qualquer pasta)
+# ============================================================
+
+def _carregar_logo_base64():
+    """Localiza a imagem do logo na pasta do app.py e converte em Base64."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    extensoes = [".jpeg", ".jpg", ".png", ".webp"]
+    
+    # 1. Tenta encontrar por nome direto
+    for ext in extensoes:
+        caminho = os.path.join(base_dir, f"logo{ext}")
+        if os.path.isfile(caminho):
+            try:
+                with open(caminho, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode()
+                    mime = "jpeg" if ext in [".jpg", ".jpeg"] else ext.replace(".", "")
+                    return f"data:image/{mime};base64,{b64}"
+            except Exception:
+                pass
+
+    # 2. Busca qualquer imagem na pasta que contenha 'logo' ou 'whatsapp'
+    try:
+        for f in os.listdir(base_dir):
+            nome_lower = f.lower()
+            if any(nome_lower.endswith(ext) for ext in extensoes):
+                if "logo" in nome_lower or "whatsapp" in nome_lower:
+                    caminho = os.path.join(base_dir, f)
+                    with open(caminho, "rb") as img_file:
+                        b64 = base64.b64encode(img_file.read()).decode()
+                        ext_found = os.path.splitext(f)[1].lower()
+                        mime = "jpeg" if ext_found in [".jpg", ".jpeg"] else ext_found.replace(".", "")
+                        return f"data:image/{mime};base64,{b64}"
+    except Exception:
+        pass
+
+    return None
+
+
+# ============================================================
+#  SISTEMA DE VERIFICACAO DE USUARIO E SENHA (LOGIN CLEAN)
 # ============================================================
 
 def verificar_autenticacao():
@@ -82,20 +183,115 @@ def verificar_autenticacao():
     if st.session_state["autenticado"]:
         return True
 
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    c_left, c_center, c_right = st.columns([1, 2, 1])
-    with c_center:
-        st.title("Acesso Restrito — SSR Pro")
-        st.info("Entre com suas credenciais de acesso para acessar o sistema.")
-        usuario_digitado = st.text_input("Usuario:", key="input_usuario_acesso")
-        senha_digitada = st.text_input("Senha:", type="password", key="input_senha_acesso")
-        if st.button("Entrar no Sistema", type="primary", use_container_width=True):
-            if usuario_digitado == USUARIO_PADRAO and senha_digitada == SENHA_PADRAO:
-                st.session_state["autenticado"] = True
-                st.success("Acesso liberado!")
-                st.rerun()
-            else:
-                st.error("Usuario ou senha incorretos!")
+    st.markdown("""
+    <style>
+        /* Esconde header do Streamlit */
+        [data-testid="stHeader"] { display: none !important; }
+
+        /* Fundo branco */
+        [data-testid="stAppViewContainer"], .stApp, [data-testid="stAppViewContainer"] > .main {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+        }
+
+        /* Centraliza vertical e horizontal */
+        [data-testid="stAppViewContainer"] > .main {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            min-height: 100vh !important;
+        }
+
+        /* 
+           Largura ESTREITA da caixa de login
+           (precisa vencer o max-width:100% do CSS global do app)
+        */
+        [data-testid="block-container"],
+        .block-container,
+        .main .block-container {
+            max-width: 360px !important;
+            width: 360px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+
+            /* Zoom 110% */
+            transform: scale(1.1) !important;
+            transform-origin: center center !important;
+        }
+
+        /* Inputs e botão ocupam só a largura da caixa (360px) */
+        div[data-testid="stTextInput"],
+        div[data-testid="stTextInput"] > div,
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stButton"],
+        div[data-testid="stButton"] button {
+            width: 100% !important;
+            max-width: 360px !important;
+        }
+
+        .titulo-sigpesq {
+            color: #007bff;
+            font-weight: 900;
+            font-size: 26px;
+            text-align: center;
+            margin: 14px 0 28px 0;
+            font-family: Arial, sans-serif;
+            letter-spacing: 1px;
+        }
+
+        div[data-testid="stTextInput"] {
+            margin-bottom: 8px !important;
+        }
+
+        button[kind="primary"] {
+            background-color: #007bff !important;
+            border-color: #007bff !important;
+            border-radius: 6px !important;
+            font-weight: bold !important;
+            padding: 0.65rem !important;
+            font-size: 16px !important;
+            margin-top: 10px !important;
+        }
+        button[kind="primary"]:hover {
+            background-color: #0056b3 !important;
+            border-color: #0056b3 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Sem colunas — evita esticar
+    logo_b64 = _carregar_logo_base64()
+    if logo_b64:
+        st.markdown(
+            f'<div style="text-align:center;">'
+            f'<img src="{logo_b64}" style="max-height:130px;width:auto;border-radius:6px;"/>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+
+    st.markdown('<div class="titulo-sigpesq">ISSR</div>', unsafe_allow_html=True)
+
+    usuario_digitado = st.text_input(
+        "Usuario", placeholder="Usuário", label_visibility="collapsed", key="login_user"
+    )
+    senha_digitada = st.text_input(
+        "Senha", type="password", placeholder="Senha", label_visibility="collapsed", key="login_pass"
+    )
+
+    if st.button("Entrar", type="primary", use_container_width=True):
+        if usuario_digitado == USUARIO_PADRAO and senha_digitada == SENHA_PADRAO:
+            st.session_state["autenticado"] = True
+            st.rerun()
+        else:
+            st.error("Credenciais inválidas!")
+
     return False
 
 if not verificar_autenticacao():
@@ -110,7 +306,6 @@ CULTURA_DIR = ""
 BACKUP_FILE = ""
 
 def _is_cloud():
-    """Identifica se esta rodando no Streamlit Cloud ou Linux Headless"""
     return (
         os.environ.get("STREAMLIT_SERVER_HEADLESS") == "true"
         or os.path.exists("/home/appuser")
@@ -118,7 +313,6 @@ def _is_cloud():
     )
 
 def abrir_pasta(path):
-    """Substituto seguro para os.startfile em nuvem"""
     if _is_cloud():
         return
     try:
@@ -135,7 +329,6 @@ def _nome_arquivo_seguro(texto):
     return "".join(c if (c.isalnum() or c in " _-") else "_" for c in t).strip().replace(" ", "_") or "padrao"
 
 def _get_desktop_path():
-    """Detecta a Area de Trabalho real (local ou OneDrive)."""
     home = os.path.expanduser("~")
     try:
         import ctypes
@@ -164,7 +357,6 @@ def _get_desktop_path():
     return fallback
 
 def atualizar_caminhos(nome_cultura):
-    """Define BASE_DIR / CULTURA_DIR / BACKUP_FILE conforme cultura."""
     global BASE_DIR, CULTURA_DIR, BACKUP_FILE
     desktop_path = _get_desktop_path()
     nome_seguro = _nome_arquivo_seguro(nome_cultura) if nome_cultura else "Projeto_Sem_Nome"
@@ -297,7 +489,6 @@ def salvar_backup_global():
 # ============================================================
 
 def garantir_pasta_codificacao():
-    """Cria a pasta 'Codificacao de bandas' dentro da pasta da cultura."""
     garantir_pastas_base()
     pasta = os.path.join(CULTURA_DIR, "Codificacao de bandas")
     os.makedirs(pasta, exist_ok=True)
@@ -305,15 +496,6 @@ def garantir_pasta_codificacao():
 
 
 def gerar_txt_transposto(primers_dict):
-    """
-    Gera TXT transposto compativel com GENES:
-    - Cada LINHA  = 1 individuo
-    - Cada COLUNA = 1 banda
-    - Apenas 0 e 1
-    - Separados por EXATAMENTE um espaco (nunca '00' colado)
-    - Sem nomes, sem cabecalho, sem linha em branco extra
-    - CRLF (\r\n) para Windows/GENES
-    """
     dfs = list(primers_dict.values())
     if not dfs:
         return ""
@@ -367,11 +549,6 @@ def gerar_txt_transposto(primers_dict):
 
 
 def salvar_codificacao_bandas(primers_dict, nome_cultura, dist_jaccard=None, acessos=None):
-    """
-    Salva na pasta Codificacao de bandas:
-      1) Excel com os primers selecionados
-      2) TXT transposto Ent-<Cultura>.txt  (so 0 e 1)
-    """
     try:
         pasta = garantir_pasta_codificacao()
         nome_seguro = _nome_arquivo_seguro(nome_cultura)
@@ -488,8 +665,6 @@ def ordenar_ids(lista):
     return sorted(list(dict.fromkeys(lista)), key=chave_ordenacao)
 
 def aplicar_filtro_bw(img_bgr, modo_filtro, brilho, contraste):
-    """Aplica o filtro de cor selecionado ao gel antes de exibir."""
-
     if modo_filtro == "Padrao (Cor Original)":
         proc = img_bgr.copy()
 
@@ -722,7 +897,7 @@ def exportar_excel_completo(primers_dict, nome_export="Combinado", dist_jaccard=
 
 
 # ============================================================
-#  HTML CANVAS - ATUALIZADO PARA NUVEM (Blob URL e FrameHeight)
+#  HTML CANVAS - ATUALIZADO PARA NUVEM
 # ============================================================
 
 HTML_TEMPLATE = r"""
@@ -1231,10 +1406,9 @@ canvas.addEventListener('auxclick',e=>{ if(e.button===1) e.preventDefault(); });
 </html>
 """
 
-COMP_VERSION = "v28_6_9_" + hashlib.md5(HTML_TEMPLATE.encode("utf-8")).hexdigest()[:10]
+COMP_VERSION = "v28_7_1_" + hashlib.md5(HTML_TEMPLATE.encode("utf-8")).hexdigest()[:10]
 
 def _component_dir():
-    """Garante que a pasta do componente web seja criada de forma segura na nuvem."""
     candidates = [
         os.path.join(tempfile.gettempdir(), "ssr_canvas_component_" + COMP_VERSION),
         os.path.join(os.getcwd(), "ssr_canvas_component")
@@ -1308,7 +1482,7 @@ def _on_change_ordenar():
 # ============================================================
 #  INTERFACE DO APLICATIVO
 # ============================================================
-st.title("Sistema SSR — Leitor de Gel Duplo v28.6.9")
+st.title("Sistema ISSR — Leitor de Gel Duplo v28.7.2")
 
 nome_cultura_input = st.text_input(
     "Nome da Cultura / Material (ex: Milho, Feijao, Cafe):",
@@ -1325,7 +1499,7 @@ if not _is_cloud():
         f"**Caminho exato no seu PC:** `{os.path.join(_get_desktop_path(), 'ssr_resultados', _nome_arquivo_seguro(nome_cultura_input))}`"
     )
 
-aba1, aba2, aba3, aba4 = st.tabs(["1. Calibracao e Marcacao", "2. Dendrograma UPGMA", "3. Exportar / Importar Excel", "4. Ajuda"])
+aba1, aba2, aba3, aba4 = st.tabs(["1. Leitura do Gel", "2. Dendrograma UPGMA", "3. Exportar / Importar Excel", "4. Ajuda"])
 
 # ─────────────────────────────────────────────────────────────
 with aba1:
@@ -1445,9 +1619,6 @@ with aba1:
         with st.expander("Controles Manuais de Calibracao"):
             cc1, cc2, cc3 = st.columns([2, 2, 3])
 
-            # ------------------------------------------------
-            # AJUSTE FINO VERTICAL (Deslocamento Y)
-            # ------------------------------------------------
             with cc1:
                 st.markdown("**Ajuste Fino Vertical**")
                 b1, b2, b3, b4 = st.columns(4)
@@ -1466,9 +1637,6 @@ with aba1:
                     key="num_offset_y2"
                 )
 
-            # ------------------------------------------------
-            # POSICAO DO LASER (Altura Linha Guia)
-            # ------------------------------------------------
             with cc2:
                 st.markdown("**Posicao do Laser**")
                 lb1, lb2, lb3, lb4 = st.columns(4)
@@ -1488,9 +1656,6 @@ with aba1:
                     key="num_pos_laser"
                 )
 
-            # ------------------------------------------------
-            # ROTACAO F1 e F2
-            # ------------------------------------------------
             with cc3:
                 st.markdown("**Rotacao F1 (graus)**")
                 r1a, r1b, r1c, r1d = st.columns(4)
@@ -1547,9 +1712,6 @@ with aba1:
         with st.expander("Ajustes Adicionais"):
             ce1, ce2, ce3 = st.columns(3)
 
-            # ------------------------------------------------
-            # BRILHO
-            # ------------------------------------------------
             with ce1:
                 st.markdown("**Brilho**")
                 bb1, bb2, bb3, bb4 = st.columns(4)
@@ -1571,9 +1733,6 @@ with aba1:
                 )
                 brilho = st.session_state["brilho_val"]
 
-            # ------------------------------------------------
-            # CONTRASTE
-            # ------------------------------------------------
             with ce2:
                 st.markdown("**Contraste**")
                 cb1, cb2, cb3, cb4 = st.columns(4)
@@ -1595,11 +1754,7 @@ with aba1:
                 )
                 contraste = st.session_state["contraste_val"]
 
-            # ------------------------------------------------
-            # ESCALA F2 + FILTRO DE COR
-            # ------------------------------------------------
             with ce3:
-                # Escala F2 em percentual (80 a 120)
                 escala_pct = int(round(float(st.session_state["escala_y2"]) * 100))
 
                 st.markdown("**Escala F2 (%)**")
@@ -1725,7 +1880,6 @@ with aba1:
             st.error(f"Falha no canvas interativo: {e}")
             st.warning("Mostrando gel em modo fallback (sem marcacao por clique na imagem). Use a matriz abaixo.")
         
-        # Se componente nao renderizar (em ambiente de nuvem rigido), exibe preview fallback
         if canvas_result is None:
             with st.expander("Preview estatico do gel (fallback visual)", expanded=False):
                 st.image(cv2.cvtColor(img_unida, cv2.COLOR_BGR2RGB), use_container_width=True)
@@ -2198,4 +2352,4 @@ with aba4:
         "5. Va ate a **Aba 3**, selecione o primer e baixe o Excel ou o arquivo TXT nos botoes indicados.\n"
     )
     st.divider()
-    st.success("SSR Pro v28.6.9 — Controles Padronizados +/- e Otimizado para Nuvem!")
+    st.success("ISSR Pro v28.7.2 — Login Clean Branco e Otimizado!")
